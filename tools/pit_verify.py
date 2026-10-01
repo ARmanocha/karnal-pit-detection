@@ -4,7 +4,7 @@ Stage 2 of the pit workflow: confirm and outline pits with high-resolution
 imagery and a YOLOv8 detector.
 
   Stage 1  Earth Engine (mine_pit_detection.js): Sentinel data at 10 m over the
-           whole district -> karnal_pits_list_<dates>.csv (lon, lat, area_ha, ...)
+           whole district -> pits CSV (latitude, longitude, area_ha, ...)
   Stage 2  this script: your high-resolution GeoTIFF(s) at ~0.3-3 m
            -> confirmed pits with boxes, plus every Stage 1 candidate marked
               confirmed / not confirmed
@@ -192,10 +192,12 @@ def merge_duplicates(detections, iou_threshold=0.5, containment=0.8):
 
 def load_candidates(path):
     df = pd.read_csv(path)
+    if {'latitude', 'longitude'} <= set(df.columns):       # current exports
+        df['lat'], df['lon'] = df['latitude'], df['longitude']
     missing = {'lon', 'lat'} - set(df.columns)
     if missing:
-        raise SystemExit(f'{path} has no {sorted(missing)} column(s); '
-                         'use the pits_list CSV exported by the Earth Engine script.')
+        raise SystemExit(f'{path} has no latitude / longitude columns; '
+                         'use the pits CSV exported by the notebook or the Earth Engine script.')
     df = df.reset_index(drop=True)
     df.insert(0, 'cand_id', df.index)
     return df
@@ -398,7 +400,8 @@ def cmd_detect(args, detector=None):
                          'geometry': mapping(reproject_geometry(to_wgs, pit['geom'])),
                          'properties': {'score': round(pit['score'], 3),
                                         'area_m2': round(pit['geom'].area, 1),
-                                        'lon': round(centroid.x, 6), 'lat': round(centroid.y, 6),
+                                        'latitude': round(centroid.y, 6), 'longitude': round(centroid.x, 6),
+                                        'google_maps': f'https://www.google.com/maps?q={centroid.y:.6f},{centroid.x:.6f}',
                                         'stage1_candidate': near_candidate.get(j)}})
     (out / 'pits_detected.geojson').write_text(
         json.dumps({'type': 'FeatureCollection', 'features': features}))

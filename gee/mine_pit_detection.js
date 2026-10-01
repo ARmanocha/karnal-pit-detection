@@ -129,13 +129,13 @@ var CONFIG = {
   numberOfTrees: 100,
   blockDeg: 0.05,             // validation blocks (~5 km); whole blocks go to train or validation
   validationPercent: 25,      // share of blocks held out; 0 = train on everything (for the final run)
-  probabilityThreshold: 0.5,  // pick from the threshold table in the Console
+  probabilityThreshold: 0.6,  // pick from the threshold table against your points in the Console
 
   // Output
   minPitAreaHa: 0.05,         // 5 pixels: smallest patch kept...
   smallPitAreaHa: 0.1,        // ...but patches below this size
   smallPitMinProb: 0.65,      // must have at least this mean probability
-  minCompactness: 0.15,       // 4*pi*area/perimeter^2; drops canals, roads, river channels
+  minCompactness: 0.2,        // 4*pi*area/perimeter^2; drops canals, roads, riverbank strips
   minZoomForOutlines: 13,
   similarityMin: 0.85,        // click-to-search display cut-off
   exportFolder: 'GEE_pits'
@@ -653,8 +653,12 @@ function vectorisePits(geometry) {
         area_ha: area.divide(1e4),
         compact: area.multiply(4 * Math.PI).divide(geometry.perimeter(1).pow(2)),
         new_pit: ee.Number(f.get('new_frac')).gte(0.5),
-        lon: centroid.get(0),
-        lat: centroid.get(1)
+        latitude: centroid.get(1),
+        longitude: centroid.get(0),
+        // Short name: shapefile field names are limited to 10 characters.
+        maps_link: ee.String('https://www.google.com/maps?q=')
+          .cat(ee.Number(centroid.get(1)).format('%.6f')).cat(',')
+          .cat(ee.Number(centroid.get(0)).format('%.6f'))
       });
     })
     .filter(ee.Filter.gte('area_ha', CONFIG.minPitAreaHa))
@@ -663,8 +667,8 @@ function vectorisePits(geometry) {
       ee.Filter.gte('prob', CONFIG.smallPitMinProb)))
     .filter(ee.Filter.lte('built_frac', CONFIG.maxBuiltShare))
     .filter(ee.Filter.gte('compact', CONFIG.minCompactness))       // not canals / roads
-    .select(['district', 'area_ha', 'prob', 'new_pit', 'water_frac', 'built_frac', 'compact',
-             'lon', 'lat']);
+    .select(['district', 'latitude', 'longitude', 'area_ha', 'prob', 'new_pit', 'water_frac',
+             'built_frac', 'compact', 'maps_link']);
 }
 
 
@@ -949,8 +953,8 @@ Export.table.toDrive({
   description: areaName + '_pits_list_' + periodTag,
   folder: CONFIG.exportFolder,
   fileFormat: 'CSV',
-  selectors: ['district', 'area_ha', 'prob', 'new_pit', 'water_frac', 'built_frac', 'compact',
-              'lon', 'lat']
+  selectors: ['district', 'latitude', 'longitude', 'area_ha', 'prob', 'new_pit', 'water_frac',
+              'built_frac', 'compact', 'maps_link']
 });
 
 Export.image.toDrive({
