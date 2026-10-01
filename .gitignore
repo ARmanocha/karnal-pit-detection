@@ -1,0 +1,8 @@
+# Notebook working files (the downloaded feature stack is ~2.5 GB for the district)
+pit_outputs/
+models/
+*.progress.json
+
+# Python / Jupyter
+__pycache__/
+.ipynb_checkpoints/
