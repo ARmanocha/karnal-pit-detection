@@ -1,7 +1,9 @@
-"""Save every figure of an executed notebook as JPG, plus a numbered full-resolution pit map with a
-latitude / longitude grid and coordinate tables of the new and the largest pits.
+"""Save every figure of an executed notebook as JPG, plus a numbered full-resolution pit map with tehsil and
+village boundaries and a latitude / longitude grid, coordinate tables of the new and the largest pits, and a
+pits-per-tehsil table.
 
-usage: python export_jpgs.py executed.ipynb pit_outputs/<run> jpg_folder
+usage: python export_jpgs.py executed.ipynb pit_outputs/<run> jpg_folder [boundaries_folder]
+       (boundaries_folder defaults to the repository's data/ folder)
 """
 import base64
 import io
@@ -22,7 +24,11 @@ from PIL import Image
 from pyproj import Transformer
 
 notebook, run_dir, out_dir = Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3])
+boundary_dir = Path(sys.argv[4]) if len(sys.argv) > 4 else Path(__file__).resolve().parent.parent / 'data'
 out_dir.mkdir(parents=True, exist_ok=True)
+district = run_dir.name.split('_')[0]
+admin = {level: gpd.read_file(boundary_dir / f'{district}_{level}s.geojson')
+         for level in ('tehsil', 'village') if (boundary_dir / f'{district}_{level}s.geojson').exists()}
 OUTLINE = [effects.withStroke(linewidth=2, foreground='black')]
 
 
@@ -84,6 +90,17 @@ for lat in np.arange(np.ceil(min(corner_lat) / step) * step, max(corner_lat), st
     ax.text(bounds.left + 0.005 * (bounds.right - bounds.left), left_y, f'{lat:.2f}°N', color='white',
             fontsize=13, ha='left', va='bottom', path_effects=OUTLINE)
 
+# Village (white) and tehsil (yellow) boundaries with their names.
+for level, colour, width, size, alpha in [('village', 'white', 0.6, 6, 0.75), ('tehsil', 'yellow', 3, 22, 1.0)]:
+    if level in admin:
+        layer = admin[level].to_crs(crs)
+        layer.boundary.plot(ax=ax, color=colour, linewidth=width, alpha=alpha)
+        for row in layer.itertuples():
+            point = row.geometry.representative_point()
+            label = getattr(row, level).replace(' ST', ' (sub-tehsil)') if level == 'tehsil' else getattr(row, level)
+            ax.text(point.x, point.y, label, color=colour, fontsize=size, ha='center', va='center', alpha=alpha,
+                    weight='bold' if level == 'tehsil' else 'normal', path_effects=OUTLINE)
+
 if pits is not None and len(pits):
     colour = np.where(pits.category != 'pit', '#00aaff', np.where(pits.new_pit == 1, '#ff2020', '#ff00ff'))
     pits.boundary.plot(ax=ax, color=colour, linewidth=0.9)
@@ -98,7 +115,8 @@ n_pits = 0 if pits is None else int((pits.category == 'pit').sum())
 n_new = 0 if pits is None else int(((pits.category == 'pit') & (pits.new_pit == 1)).sum())
 n_ponds = 0 if pits is None else int((pits.category != 'pit').sum())
 ax.text(0.01, 0.995, f'{n_pits} pits ({n_new} new = red, {n_pits - n_new} older = magenta), {n_ponds} likely village '
-        f'ponds (blue) — numbers = pit_id in pits.csv, which lists each pit\'s latitude / longitude — '
+        f'ponds (blue); yellow = tehsils, white = villages — numbers = pit_id in pits.csv (latitude / longitude, '
+        f'tehsil, village) — '
         f'Sentinel-2 10 m, {run_dir.name}', transform=ax.transAxes, color='white', fontsize=16, va='top',
         path_effects=OUTLINE)
 fig.savefig(out_dir / 'pit_map_full_resolution.jpg', dpi=100, pil_kwargs={'quality': 90})
@@ -106,14 +124,8 @@ plt.close(fig)
 
 
 # 3. Coordinate tables: the new pits and the largest pits.
-def table_jpg(rows, title, path):
-    shown = rows[['pit_id', 'latitude', 'longitude', 'area_ha', 'prob_max', 'setting']].copy()
-    shown['latitude'] = shown.latitude.map('{:.6f}° N'.format)
-    shown['longitude'] = shown.longitude.map('{:.6f}° E'.format)
-    shown['area_ha'] = shown.area_ha.map('{:.2f}'.format)
-    shown['prob_max'] = shown.prob_max.map('{:.2f}'.format)
-    shown.columns = ['Pit', 'Latitude', 'Longitude', 'Area (ha)', 'Probability', 'Setting']
-    fig, ax = plt.subplots(figsize=(11, 0.32 * len(shown) + 1.1))
+def draw_table(shown, title, path, width=15):
+    fig, ax = plt.subplots(figsize=(width, 0.32 * len(shown) + 0.9))
     ax.axis('off')
     ax.set_title(title, fontsize=13, loc='left')
     table = ax.table(cellText=shown.values, colLabels=shown.columns, loc='upper center', cellLoc='center')
@@ -128,6 +140,18 @@ def table_jpg(rows, title, path):
     plt.close(fig)
 
 
+def table_jpg(rows, title, path):
+    shown = rows[['pit_id', 'latitude', 'longitude', 'village', 'tehsil', 'area_ha', 'prob_max', 'setting']].copy()
+    shown['village'] = shown.village.fillna('')
+    shown['tehsil'] = [t if isinstance(t, str) and t else f'({d} district)' for t, d in zip(rows.tehsil, rows.district)]
+    shown['latitude'] = shown.latitude.map('{:.6f}° N'.format)
+    shown['longitude'] = shown.longitude.map('{:.6f}° E'.format)
+    shown['area_ha'] = shown.area_ha.map('{:.2f}'.format)
+    shown['prob_max'] = shown.prob_max.map('{:.2f}'.format)
+    shown.columns = ['Pit', 'Latitude', 'Longitude', 'Village', 'Tehsil', 'Area (ha)', 'Probability', 'Setting']
+    draw_table(shown, title, path)
+
+
 csv = pd.read_csv(run_dir / 'pits.csv')
 real = csv[csv.category == 'pit']
 new = real[real.new_pit == 1].sort_values('area_ha', ascending=False)
@@ -135,6 +159,13 @@ if len(new):
     table_jpg(new, f'New pits since this time last year ({len(new)}) — coordinates', out_dir / 'new_pits_coordinates.jpg')
 table_jpg(real.sort_values('area_ha', ascending=False).head(30), 'Largest 30 pits — coordinates',
           out_dir / 'largest_pits_coordinates.jpg')
+if (run_dir / 'pits_by_tehsil.csv').exists():
+    by_tehsil = pd.read_csv(run_dir / 'pits_by_tehsil.csv')
+    by_tehsil.loc[len(by_tehsil)] = ['Total', by_tehsil.pits.sum(), by_tehsil.hectares.sum(), by_tehsil.new.sum()]
+    by_tehsil['hectares'] = by_tehsil.hectares.map('{:.1f}'.format)
+    by_tehsil[['pits', 'new']] = by_tehsil[['pits', 'new']].astype(int)
+    by_tehsil.columns = ['Tehsil', 'Pits', 'Area (ha)', 'New pits']
+    draw_table(by_tehsil, f'Pits by tehsil — {district.title()}', out_dir / 'pits_by_tehsil.jpg', width=8)
 
 for path in sorted(out_dir.glob('*.jpg')):
     print(f'{path.name:45s} {Image.open(path).size}')

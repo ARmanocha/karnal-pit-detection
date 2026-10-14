@@ -138,7 +138,12 @@ var CONFIG = {
   minCompactness: 0.2,        // 4*pi*area/perimeter^2; drops canals, roads, riverbank strips
   minZoomForOutlines: 13,
   similarityMin: 0.85,        // click-to-search display cut-off
-  exportFolder: 'GEE_pits'
+  exportFolder: 'GEE_pits',
+
+  // Optional tehsil / village boundaries: upload data/karnal_boundaries_shp.zip from the repository as
+  // two table assets (see the README) and put their IDs here. Each pit then gets its tehsil and village.
+  tehsilAsset: null,          // e.g. 'projects/<your-project>/assets/karnal_tehsils'
+  villageAsset: null          // e.g. 'projects/<your-project>/assets/karnal_villages'
 };
 
 // --- Area of interest ----------------------------------------------------------
@@ -158,6 +163,18 @@ var zones = (typeof aoi !== 'undefined')
       districts,
       ee.FeatureCollection([ee.Feature(CONFIG.fallbackAoi, {name: 'fallback AOI', zone: 1})])));
 var region = zones.geometry();
+
+var tehsils = CONFIG.tehsilAsset ? ee.FeatureCollection(CONFIG.tehsilAsset) : null;
+var villages = CONFIG.villageAsset ? ee.FeatureCollection(CONFIG.villageAsset) : null;
+
+// Name of the boundary unit (tehsil / village) a point falls in, '' without boundaries.
+function nameAt(layer, point, property) {
+  if (!layer) {
+    return '';
+  }
+  var hit = layer.filterBounds(point);
+  return ee.Algorithms.If(hit.size().gt(0), hit.first().get(property), 'outside');
+}
 
 if (typeof aoi === 'undefined') {
   districts.aggregate_array('name').evaluate(function (found) {
@@ -667,8 +684,12 @@ function vectorisePits(geometry) {
       ee.Filter.gte('prob', CONFIG.smallPitMinProb)))
     .filter(ee.Filter.lte('built_frac', CONFIG.maxBuiltShare))
     .filter(ee.Filter.gte('compact', CONFIG.minCompactness))       // not canals / roads
-    .select(['district', 'latitude', 'longitude', 'area_ha', 'prob', 'new_pit', 'water_frac',
-             'built_frac', 'compact', 'maps_link']);
+    .map(function (f) {                                              // tehsil and village, if uploaded
+      var centre = f.geometry().centroid(1);
+      return f.set({tehsil: nameAt(tehsils, centre, 'tehsil'), village: nameAt(villages, centre, 'village')});
+    })
+    .select(['district', 'tehsil', 'village', 'latitude', 'longitude', 'area_ha', 'prob', 'new_pit',
+             'water_frac', 'built_frac', 'compact', 'maps_link']);
 }
 
 
@@ -709,6 +730,13 @@ Map.addLayer(strata.clip(region),
 if (useAuto && !CONFIG.samplesAsset) {
   Map.addLayer(trainingCells.style({color: 'ffffff', fillColor: '00000000', width: 1}), {},
     'Training sample cells', false);
+}
+if (villages) {
+  Map.addLayer(villages.style({color: 'ffffff', fillColor: '00000000', width: 1}), {},
+    'Village boundaries (zoom 12+)', false);
+}
+if (tehsils) {
+  Map.addLayer(tehsils.style({color: 'ffa500', fillColor: '00000000', width: 2}), {}, 'Tehsil boundaries');
 }
 Map.addLayer(ee.Image().byte().paint({featureCollection: zones, color: 1, width: 2}),
   {palette: ['ffff00']}, 'District boundaries');
@@ -757,7 +785,8 @@ function showPits(geometry, scopeText) {
     area: found.aggregate_sum('area_ha'),
     newCount: found.filter(ee.Filter.eq('new_pit', 1)).size(),
     small: found.filter(ee.Filter.lt('area_ha', 0.5)).size(),
-    byDistrict: found.aggregate_histogram('district')
+    byDistrict: found.aggregate_histogram('district'),
+    byTehsil: tehsils ? found.aggregate_histogram('tehsil') : {}
   }).evaluate(function (r, error) {
     if (error) {
       statusLabel.setValue('Could not finish (' + error + ').\n' +
@@ -767,6 +796,11 @@ function showPits(geometry, scopeText) {
     var lines = [r.count + ' pits in ' + scopeText];
     Object.keys(r.byDistrict).forEach(function (name) {
       lines.push('   ' + name + ': ' + r.byDistrict[name]);
+    });
+    Object.keys(r.byTehsil).sort(function (a, b) {
+      return r.byTehsil[b] - r.byTehsil[a];
+    }).forEach(function (name) {
+      lines.push('      ' + name + ' tehsil: ' + r.byTehsil[name]);
     });
     lines.push(r.newCount + ' new since this time last year');
     lines.push(r.small + ' smaller than 0.5 ha');
@@ -953,8 +987,8 @@ Export.table.toDrive({
   description: areaName + '_pits_list_' + periodTag,
   folder: CONFIG.exportFolder,
   fileFormat: 'CSV',
-  selectors: ['district', 'latitude', 'longitude', 'area_ha', 'prob', 'new_pit', 'water_frac',
-              'built_frac', 'compact', 'maps_link']
+  selectors: ['district', 'tehsil', 'village', 'latitude', 'longitude', 'area_ha', 'prob', 'new_pit',
+              'water_frac', 'built_frac', 'compact', 'maps_link']
 });
 
 Export.image.toDrive({
