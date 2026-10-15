@@ -34,6 +34,11 @@
  * the pit list (exported separately). The register's few "Mining Pit" entries
  * are treated as ponds too: in Karnal they are village ponds.
  *
+ * Roads and highways (optional): with OpenStreetMap roads uploaded as a table
+ * asset (CONFIG.roadAsset), each road becomes a corridor of its class's
+ * half-width; road pixels are never pit examples, and detections with at least
+ * CONFIG.roadMatch of their area on a road are removed from the pit list.
+ *
  * If you get "Computation timed out"
  *   Automatic examples are collected in sample cells (see CONFIG.trainingCells),
  *   not the whole district. If it still times out, halve trainingCells /
@@ -141,6 +146,7 @@ var CONFIG = {
   minPitAreaHa: 0.05,         // 5 pixels: smallest patch kept...
   smallPitAreaHa: 0.1,        // ...but patches below this size
   smallPitMinProb: 0.65,      // must have at least this mean probability
+  minPitProb: 0.65,           // every outline needs at least this mean probability
   minCompactness: 0.2,        // 4*pi*area/perimeter^2; drops canals, roads, riverbank strips
   minZoomForOutlines: 13,
   similarityMin: 0.85,        // click-to-search display cut-off
@@ -156,7 +162,12 @@ var CONFIG = {
   pondAsset: null,            // e.g. 'projects/<your-project>/assets/karnal_hsac_ponds'
   pondTolerance: 15,          // m; registered outlines are widened by this much (digitising offsets)
   pondMatch: 0.25,            // a detection with at least this share in registered ponds is a pond
-  pondSamples: 400            // "not pit" examples inside registered ponds
+  pondSamples: 400,           // "not pit" examples inside registered ponds
+
+  // Optional roads and highways (OpenStreetMap, incl. roads under construction): upload
+  // data/karnal_roads_shp.zip from the repository as a table asset (see the README).
+  roadAsset: null,            // e.g. 'projects/<your-project>/assets/karnal_roads'
+  roadMatch: 0.25             // a detection with at least this share on a road corridor is removed
 };
 
 // --- Area of interest ----------------------------------------------------------
@@ -185,6 +196,14 @@ var villages = CONFIG.villageAsset ? ee.FeatureCollection(CONFIG.villageAsset) :
 var registeredPonds = CONFIG.pondAsset ? ee.FeatureCollection(CONFIG.pondAsset).filterBounds(region) : null;
 var pondCode = (registeredPonds ? ee.Image(0).byte().paint(registeredPonds, 1) : ee.Image(0).byte()).rename('pond');
 var pondZone = pondCode.focalMax(CONFIG.pondTolerance, 'circle', 'meters').rename('pond');
+
+// Road corridors: each OpenStreetMap road widened by its class half-width (half_width, m) on both sides.
+var roads = CONFIG.roadAsset ? ee.FeatureCollection(CONFIG.roadAsset).filterBounds(region) : null;
+var roadZone = (roads
+  ? ee.Image(0).byte().paint(roads.map(function (f) {
+      return f.buffer(ee.Number(f.get('half_width')), 2);
+    }), 1)
+  : ee.Image(0).byte()).rename('road');
 
 // Name of the boundary unit (tehsil / village) a point falls in, '' without boundaries.
 function nameAt(layer, point, property) {
@@ -443,13 +462,14 @@ var pitCandidate = newPitRule.or(olderPitRule).and(staticBuilt.not());
 
 // 1 = pit candidate, 2 = stable water, 3 = buildings, 4 = crops/trees,
 // 5 = dry bare land; with CONFIG.pondAsset, labelled pixels inside registered
-// ponds become 7 (not pit). Pixels that match none of the rules stay unlabelled.
+// ponds become 7 (not pit); pit candidates on roads (CONFIG.roadAsset) are left
+// out. Pixels that match none of the rules stay unlabelled.
 var strata = ee.Image(0)
   .where(ndviP90.gt(CONFIG.greenNdvi).and(staticBuilt.not()), 4)
   .where(neverGreen.and(ndwiP90.lt(-0.1)).and(staticBuilt.not()), 5)
   .where(staticBuilt, 3)
   .where(waterNow.and(waterBefore), 2)
-  .where(pitCandidate, 1);
+  .where(pitCandidate.and(roadZone.not()), 1);
 strata = strata
   .where(strata.gt(0).and(pondCode.eq(1)), 7)
   .selfMask()
@@ -673,7 +693,8 @@ function vectorisePits(geometry) {
       clearedSinceLastYear.unmask(0),
       dynamicWorld.select('dw_water'),
       anyBuilt,
-      pondZone
+      pondZone,
+      roadZone
     ]))
     .reduceToVectors({
       geometry: geometry,
@@ -681,7 +702,8 @@ function vectorisePits(geometry) {
       geometryType: 'polygon',
       eightConnected: true,
       labelProperty: 'zone',
-      reducer: ee.Reducer.mean().forEach(['prob', 'new_frac', 'water_frac', 'built_frac', 'pond_frac']),
+      reducer: ee.Reducer.mean().forEach(['prob', 'new_frac', 'water_frac', 'built_frac', 'pond_frac',
+                                          'road_frac']),
       maxPixels: 1e10,
       tileScale: 16
     })
@@ -691,7 +713,8 @@ function vectorisePits(geometry) {
       var centroid = geometry.centroid(1).coordinates();
       // At least CONFIG.pondMatch of it inside registered ponds -> a pond, not a pit.
       return f.set({
-        category: ee.Algorithms.If(ee.Number(f.get('pond_frac')).gte(CONFIG.pondMatch), 'registered pond', 'pit'),
+        category: ee.Algorithms.If(ee.Number(f.get('pond_frac')).gte(CONFIG.pondMatch), 'registered pond',
+                    ee.Algorithms.If(ee.Number(f.get('road_frac')).gte(CONFIG.roadMatch), 'on a road', 'pit')),
         district: zoneNames.get(ee.Number(f.get('zone')).toInt().format('%d')),
         area_ha: area.divide(1e4),
         compact: area.multiply(4 * Math.PI).divide(geometry.perimeter(1).pow(2)),
@@ -705,6 +728,7 @@ function vectorisePits(geometry) {
       });
     })
     .filter(ee.Filter.gte('area_ha', CONFIG.minPitAreaHa))
+    .filter(ee.Filter.gte('prob', CONFIG.minPitProb))
     .filter(ee.Filter.or(
       ee.Filter.gte('area_ha', CONFIG.smallPitAreaHa),
       ee.Filter.gte('prob', CONFIG.smallPitMinProb)))
@@ -715,16 +739,23 @@ function vectorisePits(geometry) {
       return f.set({tehsil: nameAt(tehsils, centre, 'tehsil'), village: nameAt(villages, centre, 'village')});
     })
     .select(['category', 'district', 'tehsil', 'village', 'latitude', 'longitude', 'area_ha', 'prob',
-             'new_pit', 'water_frac', 'built_frac', 'compact', 'pond_frac', 'maps_link']);
+             'new_pit', 'water_frac', 'built_frac', 'compact', 'pond_frac', 'road_frac', 'maps_link']);
 }
 
-// Detections that are registered ponds, with the register's id, name and type.
-function pondDetails(detections) {
-  return detections.filter(ee.Filter.eq('category', 'registered pond')).map(function (f) {
-    var hit = registeredPonds.filterBounds(f.geometry().buffer(CONFIG.pondTolerance, 1));
-    var first = ee.Feature(ee.Algorithms.If(hit.size().gt(0), hit.first(), ee.Feature(null, {})));
-    return f.set({hsac_id: first.get('hsac_id'), hsac_name: first.get('pond_name'),
-                  hsac_type: first.get('pond_type')});
+// First feature of `layer` within `distance` m of a detection, or an empty feature.
+function firstNear(layer, f, distance) {
+  var hit = layer ? layer.filterBounds(f.geometry().buffer(distance, 1)) : ee.FeatureCollection([]);
+  return ee.Feature(ee.Algorithms.If(hit.size().gt(0), hit.first(), ee.Feature(null, {})));
+}
+
+// Removed detections with the reason (category): registered ponds with the register's id, name and type,
+// detections on roads with the road's number / name and class.
+function removedDetails(detections) {
+  return detections.filter(ee.Filter.neq('category', 'pit')).map(function (f) {
+    var pond = firstNear(registeredPonds, f, CONFIG.pondTolerance);
+    var road = firstNear(roads, f, 50);
+    return f.set({hsac_id: pond.get('hsac_id'), hsac_name: pond.get('pond_name'), hsac_type: pond.get('pond_type'),
+                  road_ref: road.get('ref'), road_name: road.get('name'), road_class: road.get('road_class')});
   });
 }
 
@@ -738,6 +769,7 @@ var NEW_PIT_COLOR = 'ff2020';
 var REMOVED_COLOR = '9e9e9e';
 var OUTLINE_COLOR = '00ffff';
 var POND_COLOR = '1e90ff';
+var ROAD_COLOR = 'ffa500';
 
 Map.centerObject(region, 10);
 Map.setOptions('SATELLITE');
@@ -780,6 +812,11 @@ if (registeredPonds) {
   Map.addLayer(registeredPonds.style({color: POND_COLOR, fillColor: POND_COLOR + '22', width: 1}), {},
     'Registered ponds (HSAC)', false);
 }
+if (roads) {
+  Map.addLayer(roads.filter(ee.Filter.inList('road_class', ['residential', 'unclassified']).not())
+      .style({color: ROAD_COLOR, width: 2}), {}, 'Main roads and highways (OSM)', false);
+  Map.addLayer(roadZone.selfMask(), {palette: [ROAD_COLOR]}, 'Road corridors (zoom 14+)', false);
+}
 Map.addLayer(ee.Image().byte().paint({featureCollection: zones, color: 1, width: 2}),
   {palette: ['ffff00']}, 'District boundaries');
 
@@ -806,6 +843,9 @@ panel.add(legendRow(OUTLINE_COLOR, 'Outlined pits (≥ ' + CONFIG.minPitAreaHa +
 if (registeredPonds) {
   panel.add(legendRow(POND_COLOR, 'Registered ponds (HSAC) — removed from the pit list'));
 }
+if (roads) {
+  panel.add(legendRow(ROAD_COLOR, 'Roads (OSM) — pits on them are removed'));
+}
 panel.add(legendRow('ffff00', 'District boundaries'));
 
 var statusLabel = ui.Label('Training the model… (usually 1–3 minutes)',
@@ -831,6 +871,7 @@ function showPits(geometry, scopeText) {
     area: found.aggregate_sum('area_ha'),
     newCount: found.filter(ee.Filter.eq('new_pit', 1)).size(),
     ponds: detections.filter(ee.Filter.eq('category', 'registered pond')).size(),
+    onRoads: detections.filter(ee.Filter.eq('category', 'on a road')).size(),
     small: found.filter(ee.Filter.lt('area_ha', 0.5)).size(),
     byDistrict: found.aggregate_histogram('district'),
     byTehsil: tehsils ? found.aggregate_histogram('tehsil') : {}
@@ -852,6 +893,9 @@ function showPits(geometry, scopeText) {
     lines.push(r.newCount + ' new since this time last year');
     if (registeredPonds) {
       lines.push(r.ponds + ' registered ponds removed (not counted)');
+    }
+    if (roads) {
+      lines.push(r.onRoads + ' on roads removed (not counted)');
     }
     lines.push(r.small + ' smaller than 0.5 ha');
     lines.push(r.area.toFixed(1) + ' ha total');
@@ -1042,14 +1086,15 @@ Export.table.toDrive({
               'water_frac', 'built_frac', 'compact', 'maps_link']
 });
 
-if (registeredPonds) {
+if (registeredPonds || roads) {
   Export.table.toDrive({
-    collection: pondDetails(allDetections),
-    description: areaName + '_ponds_excluded_' + periodTag,
+    collection: removedDetails(allDetections),
+    description: areaName + '_excluded_' + periodTag,
     folder: CONFIG.exportFolder,
     fileFormat: 'CSV',
-    selectors: ['district', 'tehsil', 'village', 'latitude', 'longitude', 'area_ha', 'prob', 'hsac_id',
-                'hsac_name', 'hsac_type', 'pond_frac', 'maps_link']
+    selectors: ['category', 'district', 'tehsil', 'village', 'latitude', 'longitude', 'area_ha', 'prob',
+                'hsac_id', 'hsac_name', 'hsac_type', 'pond_frac', 'road_ref', 'road_name', 'road_class',
+                'road_frac', 'maps_link']
   });
 }
 

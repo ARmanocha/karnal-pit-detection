@@ -1,135 +1,90 @@
 tehsil,village,pits,hectares,new
-Ballah ST,Salwan (95),17,1.93,0
-Gharaunda,Khwajpur,13,7.98,2
-Karnal,Chusana (115),9,2.86,0
-Assandh,Assandh (Rural)(Part)(84),9,2.25,1
-Assandh,Ardana (64),8,3.28,0
-Indri,Chandraon (10),8,2.51,0
-Nilokheri,Bairsal (27),7,2.92,0
-Gharaunda,Sataundi (15),7,0.84,0
-Nilokheri,Saga (58),7,0.72,3
-Karnal,Dhakwala (121),6,0.71,1
-Karnal,Bhari (85),5,2.26,0
-Gharaunda,Garhi Bhalal(43),5,2.16,2
-Indri,Chogawan (7),5,1.68,0
-Karnal,Gheer(59),5,1.3,0
-Assandh,Bindrala (88),5,0.77,0
-Indri,Pathera (22),4,1.56,0
-Nigdu ST,Bursham (7),4,1.09,0
-Indri,Smora(55),4,1.06,1
-Karnal,Mohamadpur (76),4,0.9,3
-Nising ST,Sambhli (24),4,0.68,0
-Karnal,Ghogripur (50),4,0.64,0
-Ballah ST,Pabana Hassanpur (72),3,0.73,0
-Nigdu ST,Jamba (22),3,0.71,0
-Karnal,Kunda Kalan (114),3,0.38,2
-Karnal,Uncha Siwana (CT),3,0.38,0
-Nising ST,Amunpur (31),3,0.25,0
-Indri,Khera (23),2,4.4,0
+Gharaunda,Khwajpur,14,10.21,1
+Indri,Chandraon (10),6,3.34,0
+Karnal,Chusana (115),6,2.31,0
+Assandh,Assandh (Rural)(Part)(84),6,2.02,1
+Nilokheri,Bairsal (27),5,3.1,0
+Karnal,Bhari (85),4,2.08,0
+Indri,Pathera (22),4,1.82,0
+Karnal,Ghogripur (50),4,0.69,0
+Ballah ST,Salwan (95),4,0.64,0
+Nilokheri,Saga (58),4,0.53,1
+Assandh,Bindrala (88),4,0.5,0
+Karnal,Dhakwala (121),4,0.39,2
+Gharaunda,Garhi Bhalal(43),3,1.83,2
+Assandh,Ardana (64),3,1.79,0
+Ballah ST,Pabana Hassanpur (72),3,0.66,0
+Karnal,Karnal (M Cl + OG),3,0.57,0
+Karnal,Gheer(59),3,0.41,0
+Karnal,Kunda Kalan (114),3,0.36,2
+Karnal,Uncha Siwana (CT),3,0.32,0
 Indri,Badheri (2),2,4.39,0
-Karnal,Karnal (Rural)(Part)(1),2,1.86,0
-Indri,Halwana (105),2,1.58,0
-Nilokheri,Bir Naraina (59),2,1.2,2
-Nilokheri,Raipur Roran (44),2,1.02,1
-Gharaunda,Gagsina (16),2,0.62,0
-Karnal,Bahlolpur Mushtarka (19),2,0.62,1
-Karnal,Mughal Majra (58),2,0.61,0
-Nigdu ST,Bir Dhandari (55/56),2,0.61,0
-Nising ST,Dachaur (62),2,0.6,1
-Nilokheri,Sandhir (70),2,0.45,0
-Karnal,Kutail (9),2,0.41,0
-Indri,Biana (48),2,0.34,0
-Nigdu ST,Abeli (25),2,0.34,0
-Indri,Kharak (12),2,0.33,0
-Nigdu ST,Anjan Thali (40),2,0.31,0
-Gharaunda,Gudha (23),2,0.3,0
-Gharaunda,Bijna (12),2,0.3,0
-Gharaunda,Faridpur (39),2,0.3,0
-Gharaunda,Lalupura (109),2,0.29,2
-Ballah ST,Balla (30),2,0.28,0
-Indri,Sikanderpur (40),2,0.27,0
-Indri,Tasang (30),2,0.27,0
-Karnal,Baragaon (69),2,0.25,1
-Karnal,Salaroo (59),2,0.24,0
-Assandh,Kaboolpur (80),2,0.23,0
-Indri,Garhi Birbal (32),2,0.23,0
-Nilokheri,Rajgarh (67),2,0.19,0
-Gharaunda,Arainpura (12),2,0.18,1
-Karnal,Bansa (57),2,0.16,0
-Ballah ST,Goli (32),2,0.15,0
-Gharaunda,Kohand (30),2,0.13,0
-Nigdu ST,Nigdhu (14),2,0.11,0
-Gharaunda,Pundri (40),2,0.09,1
-Nilokheri,Kalsi (69),2,0.08,1
-Gharaunda,Kalri,1,1.95,1
-Indri,Naurta(52),1,0.86,0
-Karnal,Chhapra Khera (91),1,0.85,0
-Karnal,Shei Khpura (95),1,0.65,0
+Indri,Chogawan (7),2,1.29,0
+Nilokheri,Bir Naraina (59),2,1.18,2
+Nilokheri,Raipur Roran (44),2,0.95,1
+Indri,Smora(55),2,0.85,1
+Karnal,Ramba(62),2,0.81,0
+Karnal,Uchana (60),2,0.62,0
+Karnal,Bahlolpur Mushtarka (19),2,0.56,1
+Nigdu ST,Bir Dhandari (55/56),2,0.47,0
+Nilokheri,Sandhir (70),2,0.34,0
+Indri,Biana (48),2,0.32,0
+Nilokheri,Pakhana (Part)(48),2,0.31,0
+Nising ST,Sambhli (24),2,0.3,0
+Karnal,Baragaon (69),2,0.22,1
+Gharaunda,Sataundi (15),2,0.21,0
+Nising ST,Amunpur (31),2,0.17,0
+Gharaunda,Kohand (30),2,0.1,0
+Indri,Halwana (105),1,1.46,0
+Karnal,Mughal Majra (58),1,0.72,0
 Assandh,Ichhanpur (40),1,0.57,1
-Nigdu ST,Karsadod (13),1,0.51,0
-Assandh,Assandh (MC),1,0.46,0
-Gharaunda,Barsat (42),1,0.46,0
-Nilokheri,Naraina (60),1,0.37,0
-Karnal,Uchana (60),1,0.33,0
-Nising ST,Singhra (21),1,0.32,0
-Karnal,Karnal (M Cl + OG),1,0.3,0
-Karnal,Nabipur (78),1,0.3,1
-Indri,Janesron(53),1,0.26,0
-Gharaunda,Barana (44),1,0.25,0
-Karnal,Kunjpura (75),1,0.24,0
-Ballah ST,Khaktor (74),1,0.23,0
+Karnal,Kutail (9),1,0.56,0
+Karnal,Mohamadpur (76),1,0.56,1
+Nising ST,Dachaur (62),1,0.55,1
+Nigdu ST,Karsadod (13),1,0.45,0
+Gharaunda,Barsat (42),1,0.44,0
+Assandh,Assandh (MC),1,0.42,0
+Nilokheri,Naraina (60),1,0.38,0
+Indri,Naurta(52),1,0.36,0
+Nising ST,Singhra (21),1,0.35,0
+Nigdu ST,Abeli (25),1,0.29,0
+Gharaunda,Lalupura (109),1,0.28,1
+Karnal,Karnal (Rural)(Part)(1),1,0.26,0
+Indri,Kharak (12),1,0.24,0
+Gharaunda,Gudha (23),1,0.23,0
+Indri,Janesron(53),1,0.23,0
 Nilokheri,Parwala (54),1,0.23,0
-Indri,Syed Chhapra (103),1,0.22,0
-Karnal,Ramba(62),1,0.22,0
-Karnal,Mirgahan (3),1,0.21,0
-Nilokheri,Pakhana (Part)(48),1,0.2,0
-Assandh,Phaphrana (94),1,0.19,1
-Indri,Phusgarh (1),1,0.19,0
+Indri,Syed Chhapra (103),1,0.21,0
 Nising ST,Gunana (33),1,0.19,0
-Nilokheri,Dadupur (83),1,0.18,0
-Gharaunda,Jhinwar Heri (6),1,0.16,0
-Karnal,Churni(56),1,0.16,0
-Karnal,Jundla (44),1,0.16,0
-Gharaunda,Upli (9),1,0.15,1
-Nilokheri,Amargarh (66),1,0.15,0
-Indri,Sherpur Viran (25),1,0.13,0
-Karnal,Niawal (73),1,0.13,0
-Assandh,Sheikhupura Manchuri (66),1,0.12,0
-Gharaunda,Gharaunda (Rural)(Part) (27),1,0.12,1
-Gharaunda,Bahlolpur (17),1,0.11,0
-Indri,Bibipur Brahmana (39),1,0.11,0
-Indri,Kalri Khalsa (27),1,0.11,0
-Nising ST,Nissing (MC),1,0.11,0
-Assandh,Uplani (77),1,0.1,0
+Assandh,Phaphrana (94),1,0.18,1
+Gharaunda,Faridpur (39),1,0.18,0
+Indri,Phusgarh (1),1,0.18,0
+Karnal,Jundla (44),1,0.17,0
+Ballah ST,Khaktor (74),1,0.16,0
+Indri,Tasang (30),1,0.16,0
+Ballah ST,Balla (30),1,0.15,0
+Ballah ST,Goli (32),1,0.11,0
+Gharaunda,Gharaunda (Rural)(Part) (27),1,0.11,1
+Indri,Dabkauli Kalan (51),1,0.11,0
+Indri,Keherba (4),1,0.11,0
+Gharaunda,Arainpura (12),1,0.1,1
 Nigdu ST,Moheri (25),1,0.1,0
-Assandh,Khanda Kheri (83),1,0.08,0
-Gharaunda,Gianpura (11),1,0.08,1
-Indri,Dabkauli Kalan (51),1,0.08,0
-Nigdu ST,Barthal (35),1,0.08,0
-Ballah ST,Risalwa (96),1,0.07,0
-Karnal,Darar (58),1,0.07,0
-Karnal,Mainmati (70),1,0.07,0
-Nigdu ST,Gitalpur (23),1,0.07,0
+Gharaunda,Gagsina (16),1,0.08,0
+Karnal,Darar (58),1,0.08,0
+Nigdu ST,Jamba (22),1,0.08,0
+Nigdu ST,Ramana Ramani (53),1,0.08,0
+Karnal,Bansa (57),1,0.07,0
+Karnal,Nabipur (78),1,0.07,1
 Nilokheri,Baqipur (26),1,0.07,0
-Assandh,Karsa Chaur (63),1,0.06,0
-Assandh,Mandhwal 71),1,0.06,0
-Indri,Matak Majri (Part)(24),1,0.06,0
-Indri,Santheri (3),1,0.06,0
-Nising ST,Gondar (35),1,0.06,0
-Assandh,Rahra (73),1,0.05,0
-Gharaunda,Kalron (11),1,0.05,0
-Nising ST,Baras (23),1,0.05,0
-Assandh,Jai Singhpura (82),1,0.04,0
+Karnal,Salaroo (59),1,0.06,0
+Nilokheri,Kalsi (69),1,0.06,0
+Gharaunda,Pundri (40),1,0.05,1
+Nising ST,Gondar (35),1,0.05,0
+Assandh,Khanda Kheri (83),1,0.04,0
 Gharaunda,Alipur Khalsa (36),1,0.04,0
-Indri,Kheri Man Singh(63),1,0.04,0
-Karnal,Agond (37),1,0.04,0
-Nilokheri,Arja Heri (35),1,0.04,0
-Nilokheri,Nilokheri (MC),1,0.04,0
-Ballah ST,Bhambar Heri (69),1,0.03,0
-Indri,Islam Nagar (42),1,0.03,0
-Karnal,Kachhwa (11),1,0.03,0
+Indri,Shahpur(63),1,0.04,0
+Nigdu ST,Sanwat (20),1,0.04,0
 Karnal,Mandhai (41),1,0.03,1
 Karnal,Ranwar (4),1,0.03,0
-Nilokheri,Choperi (76),1,0.03,0
+Nigdu ST,Majra Roran (29),1,0.03,0
 Nilokheri,Son Kera (51),1,0.03,0
-Nilokheri,Unispur (36),1,0.03,0
