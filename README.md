@@ -10,39 +10,47 @@ Google Earth Engine and at full 10 m detail in Python.
 
 | | Pits | Area |
 |---|---:|---:|
-| Outside the Yamuna riverbed | 584 | 196 ha |
-| In the Yamuna riverbed | 44 | 17 ha |
-| **Total in Karnal** | **628** | **213 ha** |
-| New since the same months of 2025 | 35 | |
-| Likely village ponds (listed separately, not counted above) | 53 | 17 ha |
-| Just across the district border (Kurukshetra 13, Kaithal 9, Panipat 8, Jind 3, Samli 2, Saharanpur 1) | 36 | 19 ha |
+| Outside the Yamuna riverbed | 257 | 63 ha |
+| In the Yamuna riverbed | 42 | 18 ha |
+| **Total in Karnal** | **299** | **81 ha** |
+| New since the same months of 2025 | 34 | |
+| Removed: registered ponds (HSAC pond register) | 58 | 13 ha |
+| Removed: likely village ponds (water next to a village) | 6 | 2 ha |
+| Just across the district border (Panipat 5, Kurukshetra 2, Kaithal 2, Jind 1, Samli 1, Saharanpur 1) | 12 | 3 ha |
 
-By size: 157 tiny (< 0.1 ha), 353 small (0.1–0.5 ha), 109 medium (0.5–2 ha), 9 large (> 2 ha).
-2,588 km² analysed with 88 Sentinel-2 and 24 Sentinel-1 scenes. The analysis area is FAO's 2015 outline of
-Karnal, which does not match today's boundary exactly (see Limitations), so the 36 pits found just across
-the border are listed with their own district and not counted for Karnal.
+By size: 120 tiny (< 0.1 ha), 143 small (0.1–0.5 ha), 33 medium (0.5–2 ha), 3 large (> 2 ha).
+2,588 km² analysed with 88 Sentinel-2 and 24 Sentinel-1 scenes. Removed ponds are listed in
+[`ponds_excluded.csv`](results/karnal_2026-06-30_to_2026-09-30/ponds_excluded.csv) with the register's id and name, and are not counted above.
+The analysis area is FAO's 2015 outline of Karnal, which does not match today's boundary exactly (see
+Limitations), so the 12 pits found just across the border are listed with their own district and not
+counted for Karnal.
 
 ### Pits by tehsil
 
 | Tehsil | Pits | Area (ha) | New pits |
 |---|---:|---:|---:|
-| Karnal | 144 | 46.4 | 10 |
-| Assandh | 91 | 36.3 | 6 |
-| Indri | 85 | 26.9 | 1 |
-| Gharaunda | 84 | 25.0 | 12 |
-| Nilokheri | 74 | 30.2 | 4 |
-| Nigdu (sub-tehsil) | 64 | 18.1 | 0 |
-| Ballah (sub-tehsil) | 55 | 21.4 | 1 |
-| Nising (sub-tehsil) | 31 | 9.0 | 1 |
-| **Total** | **628** | **213.3** | **35** |
+| Karnal | 70 | 17.4 | 10 |
+| Gharaunda | 51 | 16.6 | 12 |
+| Indri | 49 | 20.8 | 1 |
+| Nilokheri | 35 | 8.0 | 7 |
+| Assandh | 34 | 8.3 | 3 |
+| Ballah (sub-tehsil) | 27 | 3.4 | 0 |
+| Nigdu (sub-tehsil) | 19 | 3.9 | 0 |
+| Nising (sub-tehsil) | 14 | 2.3 | 1 |
+| **Total** | **299** | **80.5** | **34** |
 
 Villages with the most pits are in [`pits_by_village.csv`](results/karnal_2026-06-30_to_2026-09-30/pits_by_village.csv).
 
+**Registered ponds are removed.** Every detection lying in a water body of the Haryana pond register
+(HSAC Pond MIS, see below) is taken out of the pit list and written to `ponds_excluded.csv` with the
+register's id and name, and the model is trained with registered ponds as "not pit" examples. In the
+previous version of these results 331 of the 664 detected "pits" — about half — lay in registered ponds.
+
 **Treat these as candidates to verify, not confirmed pits.** There is no ground truth yet, so the pit
-threshold is the default 0.6. A visual review of the gallery found real excavations (for example a
-1.1 ha water-filled pit dug around February 2026, and a new pit beside what looks like a brick kiln) but also remaining
-false detections: pieces of canals wider than ~60 m, specks on roads, fish-pond clusters and flood
-pools in the riverbed. Labelling a few dozen examples (below) is the way to fix these.
+threshold is the default 0.6. The gallery shows plausible pits (for example pit 4, a 1.5 ha wet, bare
+patch among fields at Halwana) but also remaining false detections: pieces of a canal (pits 3 and 5),
+specks at the edge of the analysis area, and edges of water bodies that are not in the register.
+Labelling a few dozen examples (below) is the way to fix these.
 
 | Gallery (10 m view · water · radar · probability) | Statistics |
 |---|---|
@@ -52,12 +60,13 @@ Result files in [`results/karnal_2026-06-30_to_2026-09-30/`](results/karnal_2026
 
 | File | What it is |
 |---|---|
-| `pits.csv` | Every pit: **latitude, longitude, district, tehsil, village**, area, probability, new or older, riverbed or not, pit or likely village pond, Google Maps link |
+| `pits.csv` | Every pit: **latitude, longitude, district, tehsil, village**, area, probability, new or older, riverbed or not, Google Maps link |
+| `ponds_excluded.csv`, `ponds_excluded.geojson` | Detections removed because they are ponds: registered ponds (with the register's `hsac_id`, name and type, and the share of the detection inside it) and likely village ponds (water next to a village) |
 | `pits_by_tehsil.csv`, `pits_by_village.csv` | Number of pits, hectares and new pits per tehsil and per village |
 | `pits.geojson`, `pits.gpkg` | Pit outlines for QGIS / ArcGIS, with latitude / longitude attributes |
-| `pits.kml` | Google Earth: outline + numbered pin per pit, coordinates and a Google Maps link in each pin (red = new, magenta = older, blue = likely village pond) |
+| `pits.kml` | Google Earth: outline + numbered pin per pit, coordinates and a Google Maps link in each pin (red = new, magenta = older) |
 | `pit_probability.tif` | Pit probability for every 10 m pixel (0–100) |
-| `jpg/` | Numbered pit map with tehsil and village boundaries and a latitude / longitude grid, coordinate tables of the new and largest pits (08, 09), pits per tehsil (10), inputs, training examples, validation, probability, 4 gallery pages (coordinates in every title), pit history, statistics |
+| `jpg/` | Numbered pit map with tehsil and village boundaries, registered ponds (light blue) and a latitude / longitude grid, coordinate tables of the new and largest pits (08, 09), pits per tehsil (10), inputs, training examples, validation, probability, 4 gallery pages (coordinates in every title), pit history, statistics |
 | `karnal_pit_detection_executed.ipynb` | The notebook with all outputs from this run |
 
 Coordinates are WGS84 decimal degrees (6 decimals ≈ 0.1 m) of each pit's centre — or of a point
@@ -72,6 +81,15 @@ GeoJSON for the notebook and
 Nigdu and Nising carry each other's names (each one's namesake town lies in the other's polygon);
 [`tools/get_boundaries.py`](tools/get_boundaries.py) detects this and swaps them back.
 
+**Registered ponds** ([`data/karnal_hsac_ponds.geojson`](data/karnal_hsac_ponds.geojson)): the pond inventory of
+the Haryana Pond & Waste Water Management Authority, mapped by the Haryana Space Applications Centre
+([HSAC Pond MIS](https://hsac.org.in/pond_mis/)) — 3,957 water bodies in and within ~5 km of Karnal
+(3,758 ponds, 180 tanks, 11 water-logged areas, 2 lakes and 6 entries typed "Mining Pit"), read from
+HSAC's public map service by [`tools/get_hsac_ponds.py`](tools/get_hsac_ponds.py), which works for any
+Haryana district. The six "Mining Pit" entries are village ponds (named e.g. "Near School"), so they
+are treated as ponds as well. `karnal_hsac_ponds_shp.zip` is the same layer as a shapefile for an Earth
+Engine upload.
+
 ## Pit coordinates
 
 Every pit's latitude, longitude, tehsil and village are in [`pits.csv`](results/karnal_2026-06-30_to_2026-09-30/pits.csv) (also in the
@@ -83,50 +101,47 @@ spot in Google Maps.
 | ![New pits](results/karnal_2026-06-30_to_2026-09-30/jpg/08_new_pits_coordinates.jpg) | ![Largest pits](results/karnal_2026-06-30_to_2026-09-30/jpg/09_largest_pits_coordinates.jpg) |
 
 <details>
-<summary><b>40 new pits</b> (cropland in the same months of 2025, bare or flooded now) — largest first</summary>
+<summary><b>37 new pits</b> (cropland in the same months of 2025, bare or flooded now) — largest first</summary>
 
 | Pit | Latitude | Longitude | Village | Tehsil | Area (ha) | Setting | Map |
 |---:|---:|---:|---|---|---:|---|---|
-| 81 | 29.551990 | 77.106034 | Khwajpur | Gharaunda | 4.68 | Yamuna riverbed | [open](https://www.google.com/maps?q=29.551990,77.106034) |
-| 120 | 29.544302 | 76.812257 | Pabana Hassanpur (72) | Ballah ST | 3.75 | outside riverbed | [open](https://www.google.com/maps?q=29.544302,76.812257) |
-| 34 | 29.584420 | 77.093854 |  | (Samli district) | 3.32 | Yamuna riverbed | [open](https://www.google.com/maps?q=29.584420,77.093854) |
-| 4 | 29.810760 | 77.003337 | Smora(55) | Indri | 1.11 | outside riverbed | [open](https://www.google.com/maps?q=29.810760,77.003337) |
-| 204 | 29.478478 | 77.069607 | Garhi Bhalal(43) | Gharaunda | 1.11 | outside riverbed | [open](https://www.google.com/maps?q=29.478478,77.069607) |
-| 91 | 29.749565 | 76.858769 | Bir Naraina (59) | Nilokheri | 1.06 | outside riverbed | [open](https://www.google.com/maps?q=29.749565,76.858769) |
-| 224 | 29.860365 | 76.904257 | Raipur Roran (44) | Nilokheri | 0.91 | outside riverbed | [open](https://www.google.com/maps?q=29.860365,76.904257) |
-| 47 | 29.733917 | 77.090244 | Mohamadpur (76) | Karnal | 0.64 | outside riverbed | [open](https://www.google.com/maps?q=29.733917,77.090244) |
-| 221 | 29.669008 | 76.695528 | Ichhanpur (40) | Assandh | 0.57 | outside riverbed | [open](https://www.google.com/maps?q=29.669008,76.695528) |
-| 67 | 29.527347 | 76.678371 | Phaphrana (94) | Assandh | 0.52 | outside riverbed | [open](https://www.google.com/maps?q=29.527347,76.678371) |
-| 350 | 29.620713 | 76.742982 | Dachaur (62) | Nising ST | 0.50 | outside riverbed | [open](https://www.google.com/maps?q=29.620713,76.742982) |
-| 186 | 29.475289 | 76.895936 |  | (Panipat district) | 0.45 | outside riverbed | [open](https://www.google.com/maps?q=29.475289,76.895936) |
-| 97 | 29.744403 | 76.851811 | Bahlolpur Mushtarka (19) | Karnal | 0.40 | outside riverbed | [open](https://www.google.com/maps?q=29.744403,76.851811) |
-| 193 | 29.476199 | 76.895850 |  | (Panipat district) | 0.37 | outside riverbed | [open](https://www.google.com/maps?q=29.476199,76.895850) |
-| 78 | 29.559661 | 76.885625 | Gagsina (16) | Gharaunda | 0.32 | outside riverbed | [open](https://www.google.com/maps?q=29.559661,76.885625) |
-| 183 | 29.628630 | 76.581756 |  | (Kaithal district) | 0.29 | outside riverbed | [open](https://www.google.com/maps?q=29.628630,76.581756) |
-| 266 | 29.591407 | 77.076752 | Lalupura (109) | Gharaunda | 0.19 | outside riverbed | [open](https://www.google.com/maps?q=29.591407,77.076752) |
-| 349 | 29.523390 | 76.667479 | Phaphrana (94) | Assandh | 0.19 | outside riverbed | [open](https://www.google.com/maps?q=29.523390,76.667479) |
-| 95 | 29.745930 | 76.857138 | Saga (58) | Nilokheri | 0.18 | outside riverbed | [open](https://www.google.com/maps?q=29.745930,76.857138) |
-| 90 | 29.747861 | 77.085840 | Baragaon (69) | Karnal | 0.17 | outside riverbed | [open](https://www.google.com/maps?q=29.747861,77.085840) |
-| 331 | 29.475677 | 77.073346 | Garhi Bhalal(43) | Gharaunda | 0.16 | outside riverbed | [open](https://www.google.com/maps?q=29.475677,77.073346) |
-| 6 | 29.533573 | 76.578337 | Assandh (Rural)(Part)(84) | Assandh | 0.16 | outside riverbed | [open](https://www.google.com/maps?q=29.533573,76.578337) |
-| 470 | 29.576145 | 76.947126 | Upli (9) | Gharaunda | 0.16 | outside riverbed | [open](https://www.google.com/maps?q=29.576145,76.947126) |
-| 257 | 29.656760 | 77.121982 | Dhakwala (121) | Karnal | 0.14 | Yamuna riverbed | [open](https://www.google.com/maps?q=29.656760,77.121982) |
-| 93 | 29.747587 | 76.859285 | Bir Naraina (59) | Nilokheri | 0.13 | outside riverbed | [open](https://www.google.com/maps?q=29.747587,76.859285) |
-| 534 | 29.478606 | 76.628123 | Theh Malakpur (91) | Assandh | 0.11 | outside riverbed | [open](https://www.google.com/maps?q=29.478606,76.628123) |
-| 387 | 29.591788 | 77.077265 | Lalupura (109) | Gharaunda | 0.11 | outside riverbed | [open](https://www.google.com/maps?q=29.591788,77.077265) |
-| 367 | 29.558354 | 77.017418 | Arainpura (12) | Gharaunda | 0.10 | outside riverbed | [open](https://www.google.com/maps?q=29.558354,77.017418) |
-| 255 | 29.656974 | 77.121328 | Dhakwala (121) | Karnal | 0.08 | Yamuna riverbed | [open](https://www.google.com/maps?q=29.656974,77.121328) |
-| 279 | 29.577853 | 76.962126 | Gharaunda (Rural)(Part) (27) | Gharaunda | 0.08 | outside riverbed | [open](https://www.google.com/maps?q=29.577853,76.962126) |
-| 547 | 29.902955 | 76.781180 |  | (Kurukshetra district) | 0.06 | outside riverbed | [open](https://www.google.com/maps?q=29.902955,76.781180) |
-| 378 | 29.711122 | 77.132891 | Kunda Kalan (114) | Karnal | 0.06 | Yamuna riverbed | [open](https://www.google.com/maps?q=29.711122,77.132891) |
-| 480 | 29.523947 | 76.666929 | Phaphrana (94) | Assandh | 0.05 | outside riverbed | [open](https://www.google.com/maps?q=29.523947,76.666929) |
-| 697 | 29.569891 | 77.104186 | Khwajpur | Gharaunda | 0.05 | Yamuna riverbed | [open](https://www.google.com/maps?q=29.569891,77.104186) |
-| 212 | 29.660110 | 77.123478 | Dhakwala (121) | Karnal | 0.05 | Yamuna riverbed | [open](https://www.google.com/maps?q=29.660110,77.123478) |
-| 525 | 29.734211 | 77.089524 | Mohamadpur (76) | Karnal | 0.04 | outside riverbed | [open](https://www.google.com/maps?q=29.734211,77.089524) |
-| 556 | 29.559058 | 76.885420 | Gagsina (16) | Gharaunda | 0.04 | outside riverbed | [open](https://www.google.com/maps?q=29.559058,76.885420) |
-| 635 | 29.487498 | 77.030094 | Pundri (40) | Gharaunda | 0.04 | outside riverbed | [open](https://www.google.com/maps?q=29.487498,77.030094) |
-| 281 | 29.686111 | 76.870618 | Mandhai (41) | Karnal | 0.03 | outside riverbed | [open](https://www.google.com/maps?q=29.686111,76.870618) |
-| 80 | 29.720678 | 77.132387 | Kunda Kalan (114) | Karnal | 0.03 | Yamuna riverbed | [open](https://www.google.com/maps?q=29.720678,77.132387) |
+| 87 | 29.552032 | 77.106018 | Khwajpur | Gharaunda | 4.79 | Yamuna riverbed | [open](https://www.google.com/maps?q=29.552032,77.106018) |
+| 82 | 29.516034 | 77.092861 | Kalri | Gharaunda | 1.95 | Yamuna riverbed | [open](https://www.google.com/maps?q=29.516034,77.092861) |
+| 75 | 29.478458 | 77.069611 | Garhi Bhalal(43) | Gharaunda | 1.21 | outside riverbed | [open](https://www.google.com/maps?q=29.478458,77.069611) |
+| 32 | 29.749540 | 76.858752 | Bir Naraina (59) | Nilokheri | 1.05 | outside riverbed | [open](https://www.google.com/maps?q=29.749540,76.858752) |
+| 57 | 29.860365 | 76.904257 | Raipur Roran (44) | Nilokheri | 0.96 | outside riverbed | [open](https://www.google.com/maps?q=29.860365,76.904257) |
+| 31 | 29.733920 | 77.090221 | Mohamadpur (76) | Karnal | 0.68 | outside riverbed | [open](https://www.google.com/maps?q=29.733920,77.090221) |
+| 192 | 29.810776 | 77.003219 | Smora(55) | Indri | 0.67 | outside riverbed | [open](https://www.google.com/maps?q=29.810776,77.003219) |
+| 27 | 29.669008 | 76.695528 | Ichhanpur (40) | Assandh | 0.57 | outside riverbed | [open](https://www.google.com/maps?q=29.669008,76.695528) |
+| 172 | 29.620743 | 76.742969 | Dachaur (62) | Nising ST | 0.56 | outside riverbed | [open](https://www.google.com/maps?q=29.620743,76.742969) |
+| 77 | 29.476167 | 76.895833 |  | (Panipat district) | 0.45 | outside riverbed | [open](https://www.google.com/maps?q=29.476167,76.895833) |
+| 79 | 29.475289 | 76.895936 |  | (Panipat district) | 0.45 | outside riverbed | [open](https://www.google.com/maps?q=29.475289,76.895936) |
+| 22 | 29.744409 | 76.851842 | Bahlolpur Mushtarka (19) | Karnal | 0.44 | outside riverbed | [open](https://www.google.com/maps?q=29.744409,76.851842) |
+| 118 | 29.628652 | 76.581730 |  | (Kaithal district) | 0.35 | outside riverbed | [open](https://www.google.com/maps?q=29.628652,76.581730) |
+| 34 | 29.729562 | 77.128471 | Nabipur (78) | Karnal | 0.30 | Yamuna riverbed | [open](https://www.google.com/maps?q=29.729562,77.128471) |
+| 145 | 29.745877 | 76.857142 | Saga (58) | Nilokheri | 0.22 | outside riverbed | [open](https://www.google.com/maps?q=29.745877,76.857142) |
+| 112 | 29.523390 | 76.667479 | Phaphrana (94) | Assandh | 0.19 | outside riverbed | [open](https://www.google.com/maps?q=29.523390,76.667479) |
+| 35 | 29.747869 | 77.085852 | Baragaon (69) | Karnal | 0.18 | outside riverbed | [open](https://www.google.com/maps?q=29.747869,77.085852) |
+| 150 | 29.591390 | 77.076752 | Lalupura (109) | Gharaunda | 0.18 | outside riverbed | [open](https://www.google.com/maps?q=29.591390,77.076752) |
+| 95 | 29.533566 | 76.578321 | Assandh (Rural)(Part)(84) | Assandh | 0.18 | outside riverbed | [open](https://www.google.com/maps?q=29.533566,76.578321) |
+| 12 | 29.656811 | 77.121983 | Dhakwala (121) | Karnal | 0.16 | Yamuna riverbed | [open](https://www.google.com/maps?q=29.656811,77.121983) |
+| 76 | 29.475692 | 77.073346 | Garhi Bhalal(43) | Gharaunda | 0.15 | outside riverbed | [open](https://www.google.com/maps?q=29.475692,77.073346) |
+| 193 | 29.576161 | 76.947129 | Upli (9) | Gharaunda | 0.15 | outside riverbed | [open](https://www.google.com/maps?q=29.576161,76.947129) |
+| 30 | 29.747593 | 76.859317 | Bir Naraina (59) | Nilokheri | 0.15 | outside riverbed | [open](https://www.google.com/maps?q=29.747593,76.859317) |
+| 161 | 29.734247 | 77.089026 | Mohamadpur (76) | Karnal | 0.14 | outside riverbed | [open](https://www.google.com/maps?q=29.734247,77.089026) |
+| 106 | 29.577910 | 76.962067 | Gharaunda (Rural)(Part) (27) | Gharaunda | 0.12 | outside riverbed | [open](https://www.google.com/maps?q=29.577910,76.962067) |
+| 245 | 29.591788 | 77.077265 | Lalupura (109) | Gharaunda | 0.11 | outside riverbed | [open](https://www.google.com/maps?q=29.591788,77.077265) |
+| 97 | 29.558369 | 77.017431 | Arainpura (12) | Gharaunda | 0.11 | outside riverbed | [open](https://www.google.com/maps?q=29.558369,77.017431) |
+| 156 | 29.569381 | 77.003800 | Gianpura (11) | Gharaunda | 0.08 | outside riverbed | [open](https://www.google.com/maps?q=29.569381,77.003800) |
+| 24 | 29.581300 | 77.095913 | Khwajpur | Gharaunda | 0.08 | Yamuna riverbed | [open](https://www.google.com/maps?q=29.581300,77.095913) |
+| 163 | 29.751118 | 76.846043 | Saga (58) | Nilokheri | 0.06 | outside riverbed | [open](https://www.google.com/maps?q=29.751118,76.846043) |
+| 183 | 29.711122 | 77.132891 | Kunda Kalan (114) | Karnal | 0.06 | Yamuna riverbed | [open](https://www.google.com/maps?q=29.711122,77.132891) |
+| 221 | 29.487535 | 77.030090 | Pundri (40) | Gharaunda | 0.05 | outside riverbed | [open](https://www.google.com/maps?q=29.487535,77.030090) |
+| 263 | 29.734233 | 77.089540 | Mohamadpur (76) | Karnal | 0.05 | outside riverbed | [open](https://www.google.com/maps?q=29.734233,77.089540) |
+| 267 | 29.751160 | 76.845610 | Saga (58) | Nilokheri | 0.05 | outside riverbed | [open](https://www.google.com/maps?q=29.751160,76.845610) |
+| 167 | 29.870309 | 76.956853 | Kalsi (69) | Nilokheri | 0.04 | outside riverbed | [open](https://www.google.com/maps?q=29.870309,76.956853) |
+| 37 | 29.720678 | 77.132387 | Kunda Kalan (114) | Karnal | 0.03 | Yamuna riverbed | [open](https://www.google.com/maps?q=29.720678,77.132387) |
+| 195 | 29.686111 | 76.870618 | Mandhai (41) | Karnal | 0.03 | outside riverbed | [open](https://www.google.com/maps?q=29.686111,76.870618) |
 
 </details>
 
@@ -135,21 +150,21 @@ spot in Google Maps.
 
 | Pit | Latitude | Longitude | Village | Tehsil | Area (ha) | Setting | Map |
 |---:|---:|---:|---|---|---:|---|---|
-| 51 | 29.840733 | 76.976821 | Amargarh (66) | Nilokheri | 5.75 | outside riverbed | [open](https://www.google.com/maps?q=29.840733,76.976821) |
-| 81 | 29.551990 | 77.106034 | Khwajpur | Gharaunda | 4.68 | Yamuna riverbed | [open](https://www.google.com/maps?q=29.551990,77.106034) |
-| 120 | 29.544302 | 76.812257 | Pabana Hassanpur (72) | Ballah ST | 3.75 | outside riverbed | [open](https://www.google.com/maps?q=29.544302,76.812257) |
-| 34 | 29.584420 | 77.093854 |  | (Samli district) | 3.32 | Yamuna riverbed | [open](https://www.google.com/maps?q=29.584420,77.093854) |
-| 190 | 29.606444 | 76.835694 | Bansa (57) | Karnal | 3.25 | outside riverbed | [open](https://www.google.com/maps?q=29.606444,76.835694) |
-| 128 | 29.552063 | 76.810161 | Balran Gran (70) | Ballah ST | 2.83 | outside riverbed | [open](https://www.google.com/maps?q=29.552063,76.810161) |
-| 195 | 29.607638 | 76.571657 | Rahra (73) | Assandh | 2.58 | outside riverbed | [open](https://www.google.com/maps?q=29.607638,76.571657) |
-| 179 | 29.903693 | 76.781160 |  | (Kurukshetra district) | 2.32 | outside riverbed | [open](https://www.google.com/maps?q=29.903693,76.781160) |
-| 77 | 29.576189 | 76.796276 | Bhambar Heri (69) | Ballah ST | 2.19 | outside riverbed | [open](https://www.google.com/maps?q=29.576189,76.796276) |
-| 37 | 29.841095 | 76.891809 | Seedpur (41) | Nilokheri | 2.16 | outside riverbed | [open](https://www.google.com/maps?q=29.841095,76.891809) |
-| 114 | 29.551416 | 76.659306 | Jhabala (81) | Assandh | 2.09 | outside riverbed | [open](https://www.google.com/maps?q=29.551416,76.659306) |
-| 389 | 29.728846 | 76.880177 | Kachhwa (11) | Karnal | 1.98 | outside riverbed | [open](https://www.google.com/maps?q=29.728846,76.880177) |
-| 36 | 29.795283 | 76.980188 | Ramba(62) | Karnal | 1.83 | outside riverbed | [open](https://www.google.com/maps?q=29.795283,76.980188) |
-| 313 | 29.835544 | 76.896958 | Dheru Majra (42) | Nilokheri | 1.79 | outside riverbed | [open](https://www.google.com/maps?q=29.835544,76.896958) |
-| 191 | 29.479668 | 76.529161 | Ardana (64) | Assandh | 1.70 | outside riverbed | [open](https://www.google.com/maps?q=29.479668,76.529161) |
+| 87 | 29.552032 | 77.106018 | Khwajpur | Gharaunda | 4.79 | Yamuna riverbed | [open](https://www.google.com/maps?q=29.552032,77.106018) |
+| 61 | 29.885663 | 77.069563 | Khera (23) | Indri | 4.37 | outside riverbed | [open](https://www.google.com/maps?q=29.885663,77.069563) |
+| 62 | 29.887393 | 77.051478 | Badheri (2) | Indri | 4.32 | outside riverbed | [open](https://www.google.com/maps?q=29.887393,77.051478) |
+| 82 | 29.516034 | 77.092861 | Kalri | Gharaunda | 1.95 | Yamuna riverbed | [open](https://www.google.com/maps?q=29.516034,77.092861) |
+| 78 | 29.479661 | 76.529160 | Ardana (64) | Assandh | 1.77 | outside riverbed | [open](https://www.google.com/maps?q=29.479661,76.529160) |
+| 54 | 29.682128 | 76.956603 | Karnal (Rural)(Part)(1) | Karnal | 1.63 | outside riverbed | [open](https://www.google.com/maps?q=29.682128,76.956603) |
+| 41 | 29.706463 | 77.132010 | Chusana (115) | Karnal | 1.60 | Yamuna riverbed | [open](https://www.google.com/maps?q=29.706463,77.132010) |
+| 4 | 29.823660 | 77.139928 | Halwana (105) | Indri | 1.48 | outside riverbed | [open](https://www.google.com/maps?q=29.823660,77.139928) |
+| 50 | 29.700295 | 77.136592 | Bhari (85) | Karnal | 1.47 | Yamuna riverbed | [open](https://www.google.com/maps?q=29.700295,77.136592) |
+| 131 | 29.890501 | 77.180958 | Chandraon (10) | Indri | 1.35 | outside riverbed | [open](https://www.google.com/maps?q=29.890501,77.180958) |
+| 89 | 29.528667 | 76.617388 | Assandh (Rural)(Part)(84) | Assandh | 1.32 | outside riverbed | [open](https://www.google.com/maps?q=29.528667,76.617388) |
+| 72 | 29.894305 | 76.955535 | Bairsal (27) | Nilokheri | 1.25 | outside riverbed | [open](https://www.google.com/maps?q=29.894305,76.955535) |
+| 75 | 29.478458 | 77.069611 | Garhi Bhalal(43) | Gharaunda | 1.21 | outside riverbed | [open](https://www.google.com/maps?q=29.478458,77.069611) |
+| 91 | 29.557121 | 77.104161 | Khwajpur | Gharaunda | 1.21 | Yamuna riverbed | [open](https://www.google.com/maps?q=29.557121,77.104161) |
+| 32 | 29.749540 | 76.858752 | Bir Naraina (59) | Nilokheri | 1.05 | outside riverbed | [open](https://www.google.com/maps?q=29.749540,76.858752) |
 
 </details>
 
@@ -159,8 +174,9 @@ spot in Google Maps.
 |---|---|
 | [`notebooks/karnal_pit_detection.ipynb`](notebooks/karnal_pit_detection.ipynb) | Main workflow: Earth Engine features → download → features, training, pit outlines, gallery, maps, pit history, statistics, exports |
 | [`gee/mine_pit_detection.js`](gee/mine_pit_detection.js) | The same idea entirely in the Earth Engine Code Editor (no download), with click-to-label layers — see [Use it in Google Earth Engine only](#use-it-in-google-earth-engine-only-no-python) |
-| [`data/`](data/) | Tehsil, village and neighbouring-district boundaries of Karnal (GeoJSON + shapefile zip) |
+| [`data/`](data/) | Tehsil, village and neighbouring-district boundaries and the registered ponds of Karnal (GeoJSON + shapefile zips) |
 | [`tools/get_boundaries.py`](tools/get_boundaries.py) | Makes the tehsil and village boundary files for any Indian district: `python tools/get_boundaries.py Panipat` |
+| [`tools/get_hsac_ponds.py`](tools/get_hsac_ponds.py) | Downloads the registered ponds (HSAC pond inventory) of any Haryana district: `python tools/get_hsac_ponds.py Panipat` |
 | [`tools/pit_verify.py`](tools/pit_verify.py) | Optional stage 2 for high-resolution imagery: confirm / outline candidates with a YOLOv8 detector |
 | [`tools/export_jpgs.py`](tools/export_jpgs.py) | Saves every figure of an executed notebook as JPG, plus a numbered full-resolution pit map with tehsil / village boundaries and a latitude / longitude grid, coordinate tables and a pits-per-tehsil table |
 
@@ -173,10 +189,12 @@ spot in Google Maps.
    pits / buildings / water / crops.
 2. The features are **downloaded** as one GeoTIFF (resumable, with timeouts).
 3. **Locally at 10 m**: context features (each pixel vs. its 130 m surroundings), sub-pixel
-   water / bare / vegetation / building fractions, automatic training examples plus your own points,
-   a gradient-boosting model validated on 5 km blocks it never trained on.
+   water / bare / vegetation / building fractions, automatic training examples (registered ponds as
+   "not pit" examples) plus your own points, a gradient-boosting model validated on 5 km blocks it
+   never trained on.
 4. **Pit objects**: hysteresis outlines; building pixels removed; tiny pits kept only when very
-   confident; canals, drains, roads and thin lines dropped; village ponds tagged; riverbed pits tagged.
+   confident; canals, drains, roads and thin lines dropped; registered ponds and likely village ponds
+   removed to `ponds_excluded.csv`; riverbed pits tagged.
 5. Optional **2.5 m super-resolution** (SEN2SR) for close-ups and refined outlines.
 
 ## Run it
@@ -241,6 +259,7 @@ press **RUN** on:
 | `karnal_pits_list_<dates>` | CSV: district, tehsil, village, **latitude, longitude**, area_ha, prob, new_pit, water_frac, built_frac, compact, `maps_link` (Google Maps) |
 | `karnal_pits_polygons_<dates>` | Shapefile of the pit outlines with the same attributes (change `fileFormat` to `'KML'` for Google Earth) |
 | `karnal_pit_probability_<dates>` | GeoTIFF of the pit probability (0–100) for every 10 m pixel |
+| `karnal_ponds_excluded_<dates>` | Only with `pondAsset` (below): CSV of the detections removed as registered ponds, with the register's `hsac_id`, name and type |
 
 **Optional — tehsil and village boundaries in Earth Engine.** Earth Engine has no tehsil or village
 layer for India, so upload the repository's ones once:
@@ -255,6 +274,15 @@ layer for India, so upload the repository's ones once:
 The map then shows *Tehsil boundaries* (orange) and *Village boundaries* (white, in the Layers menu), the
 panel counts pits per tehsil, and the exported CSV and shapefile fill the `tehsil` and `village` columns.
 For another district, make its files first with `python tools/get_boundaries.py <District>`.
+
+**Optional — remove registered ponds in Earth Engine.** Upload
+[`data/karnal_hsac_ponds_shp.zip`](data/karnal_hsac_ponds_shp.zip) the same way (unzip, **NEW** →
+**Shape files**, the five `karnal_hsac_ponds.*` files, asset name `karnal_hsac_ponds`) and set
+`pondAsset: 'projects/<your-project>/assets/karnal_hsac_ponds'`. Registered ponds then become "not pit"
+training examples, detections with at least `pondMatch` (25 %) of their area in a registered pond (widened
+by `pondTolerance`, 15 m) leave the pit list and the counts, the *Registered ponds (HSAC)* layer is added,
+and the Tasks tab gets a `ponds_excluded` export. For another Haryana district run
+`python tools/get_hsac_ponds.py <District>` first.
 
 **5. Improve it by labelling** — after the first run the drawing tools (top-left of the map) contain
 two point layers, `pits` (red) and `nonPits` (blue). Zoom the Satellite basemap to 16–18, start where
@@ -287,6 +315,12 @@ The results in this repository come from the notebook.
 - The analysis area is FAO's 2015 outline of Karnal. Compared with today's boundary it misses about
   106 km² (4 %) of Karnal — mostly along the Yamuna on the east edge, the largest piece 35 km² east of
   Indri — and includes 202 km² of neighbouring districts (pits there are listed with their own district).
+- Only ponds in the HSAC register are removed by name; unregistered ponds and fish ponds can remain.
+  Training on registered ponds also teaches the model what a pond looks like, which removes many
+  unregistered ponds — but a water-filled pit looks the same at 10 m. Compared with training without
+  them, about 120 small water bodies outside the register were dropped (13 of them in the Yamuna
+  riverbed). To only remove registered ponds, set `SAMPLES['registered_pond'] = 0` in the notebook
+  (`pondSamples: 0` in the Earth Engine script).
 - Tehsil boundaries are from 2018 and village boundaries from the 2011 Census; their edges do not match
   exactly, and newer administrative changes are not included. Pits right at a boundary may be assigned
   to the neighbouring unit.
@@ -297,6 +331,8 @@ Copernicus Sentinel-1 and Sentinel-2; Cloud Score+; Google Dynamic World; Google
 Foundations satellite embeddings; Google Open Buildings 2.5D Temporal; ESA WorldCover; WWF HydroSHEDS
 Free-Flowing Rivers; FAO GAUL 2015 boundaries — all via Google Earth Engine. Tehsil (2018) and village
 (2011 Census) boundaries: [geoBoundaries](https://www.geoboundaries.org) gbOpen India ADM3 / ADM5
-(source: Pathways Data, Local Government Directory and Census of India), Open Data Commons ODbL 1.0. Optional SEN2SR
+(source: Pathways Data, Local Government Directory and Census of India), Open Data Commons ODbL 1.0. Registered
+ponds: Haryana Pond & Waste Water Management Authority / Haryana Space Applications Centre (HSAC) pond
+inventory, [Pond MIS](https://hsac.org.in/pond_mis/), from HSAC's public map service. Optional SEN2SR
 super-resolution by ESA OpenSR. The detection ideas (context, shape, block validation, local labels)
 were informed by [BapakmuLah/Satellit-Based-Open-Pit-Mining-Detection](https://github.com/BapakmuLah/Satellit-Based-Open-Pit-Mining-Detection).

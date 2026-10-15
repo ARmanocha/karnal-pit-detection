@@ -28,7 +28,7 @@ boundary_dir = Path(sys.argv[4]) if len(sys.argv) > 4 else Path(__file__).resolv
 out_dir.mkdir(parents=True, exist_ok=True)
 district = run_dir.name.split('_')[0]
 admin = {level: gpd.read_file(boundary_dir / f'{district}_{level}s.geojson')
-         for level in ('tehsil', 'village') if (boundary_dir / f'{district}_{level}s.geojson').exists()}
+         for level in ('tehsil', 'village', 'hsac_pond') if (boundary_dir / f'{district}_{level}s.geojson').exists()}
 OUTLINE = [effects.withStroke(linewidth=2, foreground='black')]
 
 
@@ -90,6 +90,10 @@ for lat in np.arange(np.ceil(min(corner_lat) / step) * step, max(corner_lat), st
     ax.text(bounds.left + 0.005 * (bounds.right - bounds.left), left_y, f'{lat:.2f}°N', color='white',
             fontsize=13, ha='left', va='bottom', path_effects=OUTLINE)
 
+# Registered ponds (HSAC pond inventory) in light blue.
+if 'hsac_pond' in admin:
+    admin['hsac_pond'].to_crs(crs).boundary.plot(ax=ax, color='#00e5ff', linewidth=0.7, alpha=0.9)
+
 # Village (white) and tehsil (yellow) boundaries with their names.
 for level, colour, width, size, alpha in [('village', 'white', 0.6, 6, 0.75), ('tehsil', 'yellow', 3, 22, 1.0)]:
     if level in admin:
@@ -113,12 +117,14 @@ ax.set_ylim(bounds.bottom, bounds.top)
 ax.axis('off')
 n_pits = 0 if pits is None else int((pits.category == 'pit').sum())
 n_new = 0 if pits is None else int(((pits.category == 'pit') & (pits.new_pit == 1)).sum())
-n_ponds = 0 if pits is None else int((pits.category != 'pit').sum())
-ax.text(0.01, 0.995, f'{n_pits} pits ({n_new} new = red, {n_pits - n_new} older = magenta), {n_ponds} likely village '
-        f'ponds (blue); yellow = tehsils, white = villages — numbers = pit_id in pits.csv (latitude / longitude, '
-        f'tehsil, village) — '
-        f'Sentinel-2 10 m, {run_dir.name}', transform=ax.transAxes, color='white', fontsize=16, va='top',
-        path_effects=OUTLINE)
+excluded = pd.read_csv(run_dir / 'ponds_excluded.csv') if (run_dir / 'ponds_excluded.csv').exists() else pd.DataFrame()
+n_ponds = len(excluded)
+ax.text(0.01, 0.99, f'{n_pits} pits ({n_new} new = red, {n_pits - n_new} older = magenta); numbers = pit_id in pits.csv '
+        f'(latitude / longitude, tehsil, village)\n'
+        f'Light blue = registered ponds (HSAC), {n_ponds} detections that are ponds removed (ponds_excluded.csv); '
+        f'yellow = tehsils, white = villages — Sentinel-2 10 m, {run_dir.name}', transform=ax.transAxes,
+        color='white', fontsize=16, va='top', linespacing=1.5,
+        bbox=dict(facecolor='black', alpha=0.65, edgecolor='none', pad=8))
 fig.savefig(out_dir / 'pit_map_full_resolution.jpg', dpi=100, pil_kwargs={'quality': 90})
 plt.close(fig)
 

@@ -28,6 +28,12 @@
  *   - A final filter: pixels where 2+ sources agree on "building" are removed
  *     (shown in grey), and outlines that are mostly building are dropped.
  *
+ * Registered ponds (optional, Haryana): with the HSAC pond inventory uploaded
+ * as a table asset (CONFIG.pondAsset), registered ponds / tanks / lakes are
+ * "not pit" training examples and detections lying in them are removed from
+ * the pit list (exported separately). The register's few "Mining Pit" entries
+ * are treated as ponds too: in Karnal they are village ponds.
+ *
  * If you get "Computation timed out"
  *   Automatic examples are collected in sample cells (see CONFIG.trainingCells),
  *   not the whole district. If it still times out, halve trainingCells /
@@ -143,7 +149,14 @@ var CONFIG = {
   // Optional tehsil / village boundaries: upload data/karnal_boundaries_shp.zip from the repository as
   // two table assets (see the README) and put their IDs here. Each pit then gets its tehsil and village.
   tehsilAsset: null,          // e.g. 'projects/<your-project>/assets/karnal_tehsils'
-  villageAsset: null          // e.g. 'projects/<your-project>/assets/karnal_villages'
+  villageAsset: null,         // e.g. 'projects/<your-project>/assets/karnal_villages'
+
+  // Optional registered ponds (HSAC pond inventory, https://hsac.org.in/pond_mis/): upload
+  // data/karnal_hsac_ponds_shp.zip from the repository as a table asset (see the README).
+  pondAsset: null,            // e.g. 'projects/<your-project>/assets/karnal_hsac_ponds'
+  pondTolerance: 15,          // m; registered outlines are widened by this much (digitising offsets)
+  pondMatch: 0.25,            // a detection with at least this share in registered ponds is a pond
+  pondSamples: 400            // "not pit" examples inside registered ponds
 };
 
 // --- Area of interest ----------------------------------------------------------
@@ -166,6 +179,12 @@ var region = zones.geometry();
 
 var tehsils = CONFIG.tehsilAsset ? ee.FeatureCollection(CONFIG.tehsilAsset) : null;
 var villages = CONFIG.villageAsset ? ee.FeatureCollection(CONFIG.villageAsset) : null;
+
+// Registered water bodies (1 = pond / tank / lake / water-logged area); pondZone widens them by
+// CONFIG.pondTolerance for matching detections.
+var registeredPonds = CONFIG.pondAsset ? ee.FeatureCollection(CONFIG.pondAsset).filterBounds(region) : null;
+var pondCode = (registeredPonds ? ee.Image(0).byte().paint(registeredPonds, 1) : ee.Image(0).byte()).rename('pond');
+var pondZone = pondCode.focalMax(CONFIG.pondTolerance, 'circle', 'meters').rename('pond');
 
 // Name of the boundary unit (tehsil / village) a point falls in, '' without boundaries.
 function nameAt(layer, point, property) {
@@ -423,13 +442,16 @@ var staticBuilt = worldCoverBuilt.or(buildingPresence.gt(CONFIG.builtPresence));
 var pitCandidate = newPitRule.or(olderPitRule).and(staticBuilt.not());
 
 // 1 = pit candidate, 2 = stable water, 3 = buildings, 4 = crops/trees,
-// 5 = dry bare land. Pixels that match none of the rules stay unlabelled.
+// 5 = dry bare land; with CONFIG.pondAsset, labelled pixels inside registered
+// ponds become 7 (not pit). Pixels that match none of the rules stay unlabelled.
 var strata = ee.Image(0)
   .where(ndviP90.gt(CONFIG.greenNdvi).and(staticBuilt.not()), 4)
   .where(neverGreen.and(ndwiP90.lt(-0.1)).and(staticBuilt.not()), 5)
   .where(staticBuilt, 3)
   .where(waterNow.and(waterBefore), 2)
-  .where(pitCandidate, 1)
+  .where(pitCandidate, 1);
+strata = strata
+  .where(strata.gt(0).and(pondCode.eq(1)), 7)
   .selfMask()
   .rename('stratum');
 
@@ -483,9 +505,10 @@ if (useAuto && !CONFIG.samplesAsset) {
   var strataPoints = strata.stratifiedSample({
     numPoints: CONFIG.otherSamples,
     classBand: 'stratum',
-    classValues: [1, 2, 3, 4, 5],
+    classValues: [1, 2, 3, 4, 5].concat(registeredPonds ? [7] : []),
     classPoints: [CONFIG.pitSamples, CONFIG.otherSamples, CONFIG.builtSamples,
-                  CONFIG.otherSamples, CONFIG.otherSamples],
+                  CONFIG.otherSamples, CONFIG.otherSamples]
+                 .concat(registeredPonds ? [CONFIG.pondSamples] : []),
     region: trainingArea,
     scale: CONFIG.labelScale,
     seed: 42,
@@ -649,7 +672,8 @@ function vectorisePits(geometry) {
       pitProbability,
       clearedSinceLastYear.unmask(0),
       dynamicWorld.select('dw_water'),
-      anyBuilt
+      anyBuilt,
+      pondZone
     ]))
     .reduceToVectors({
       geometry: geometry,
@@ -657,7 +681,7 @@ function vectorisePits(geometry) {
       geometryType: 'polygon',
       eightConnected: true,
       labelProperty: 'zone',
-      reducer: ee.Reducer.mean().forEach(['prob', 'new_frac', 'water_frac', 'built_frac']),
+      reducer: ee.Reducer.mean().forEach(['prob', 'new_frac', 'water_frac', 'built_frac', 'pond_frac']),
       maxPixels: 1e10,
       tileScale: 16
     })
@@ -665,7 +689,9 @@ function vectorisePits(geometry) {
       var geometry = f.geometry();
       var area = geometry.area(1);
       var centroid = geometry.centroid(1).coordinates();
+      // At least CONFIG.pondMatch of it inside registered ponds -> a pond, not a pit.
       return f.set({
+        category: ee.Algorithms.If(ee.Number(f.get('pond_frac')).gte(CONFIG.pondMatch), 'registered pond', 'pit'),
         district: zoneNames.get(ee.Number(f.get('zone')).toInt().format('%d')),
         area_ha: area.divide(1e4),
         compact: area.multiply(4 * Math.PI).divide(geometry.perimeter(1).pow(2)),
@@ -688,8 +714,18 @@ function vectorisePits(geometry) {
       var centre = f.geometry().centroid(1);
       return f.set({tehsil: nameAt(tehsils, centre, 'tehsil'), village: nameAt(villages, centre, 'village')});
     })
-    .select(['district', 'tehsil', 'village', 'latitude', 'longitude', 'area_ha', 'prob', 'new_pit',
-             'water_frac', 'built_frac', 'compact', 'maps_link']);
+    .select(['category', 'district', 'tehsil', 'village', 'latitude', 'longitude', 'area_ha', 'prob',
+             'new_pit', 'water_frac', 'built_frac', 'compact', 'pond_frac', 'maps_link']);
+}
+
+// Detections that are registered ponds, with the register's id, name and type.
+function pondDetails(detections) {
+  return detections.filter(ee.Filter.eq('category', 'registered pond')).map(function (f) {
+    var hit = registeredPonds.filterBounds(f.geometry().buffer(CONFIG.pondTolerance, 1));
+    var first = ee.Feature(ee.Algorithms.If(hit.size().gt(0), hit.first(), ee.Feature(null, {})));
+    return f.set({hsac_id: first.get('hsac_id'), hsac_name: first.get('pond_name'),
+                  hsac_type: first.get('pond_type')});
+  });
 }
 
 
@@ -701,6 +737,7 @@ var PIT_COLOR = 'ff00ff';
 var NEW_PIT_COLOR = 'ff2020';
 var REMOVED_COLOR = '9e9e9e';
 var OUTLINE_COLOR = '00ffff';
+var POND_COLOR = '1e90ff';
 
 Map.centerObject(region, 10);
 Map.setOptions('SATELLITE');
@@ -725,8 +762,9 @@ Map.addLayer(clearedSinceLastYear.selfMask(), {palette: ['ffa500']},
   'Cropland this time last year, bare/flooded now', false);
 Map.addLayer(riverbed.selfMask().clip(region), {palette: ['00bfff']}, 'Yamuna riverbed zone', false);
 Map.addLayer(strata.clip(region),
-  {min: 1, max: 5, palette: ['ff0000', '0000ff', '808080', '00aa00', 'f4a460']},
-  'Auto label strata (red pit candidate, blue water, grey buildings, green crops, tan dry bare)', false);
+  {min: 1, max: 7, palette: ['ff0000', '0000ff', '808080', '00aa00', 'f4a460', '000000', '00e5ff']},
+  'Auto label strata (red pit candidate, blue water, grey buildings, green crops, tan dry bare, ' +
+  'cyan registered pond)', false);
 if (useAuto && !CONFIG.samplesAsset) {
   Map.addLayer(trainingCells.style({color: 'ffffff', fillColor: '00000000', width: 1}), {},
     'Training sample cells', false);
@@ -737,6 +775,10 @@ if (villages) {
 }
 if (tehsils) {
   Map.addLayer(tehsils.style({color: 'ffa500', fillColor: '00000000', width: 2}), {}, 'Tehsil boundaries');
+}
+if (registeredPonds) {
+  Map.addLayer(registeredPonds.style({color: POND_COLOR, fillColor: POND_COLOR + '22', width: 1}), {},
+    'Registered ponds (HSAC)', false);
 }
 Map.addLayer(ee.Image().byte().paint({featureCollection: zones, color: 1, width: 2}),
   {palette: ['ffff00']}, 'District boundaries');
@@ -761,6 +803,9 @@ panel.add(legendRow(NEW_PIT_COLOR, 'New pit (cropland this time last year)'));
 panel.add(legendRow(PIT_COLOR, 'Older pit'));
 panel.add(legendRow(REMOVED_COLOR, 'Removed: looks like a building'));
 panel.add(legendRow(OUTLINE_COLOR, 'Outlined pits (≥ ' + CONFIG.minPitAreaHa + ' ha)'));
+if (registeredPonds) {
+  panel.add(legendRow(POND_COLOR, 'Registered ponds (HSAC) — removed from the pit list'));
+}
 panel.add(legendRow('ffff00', 'District boundaries'));
 
 var statusLabel = ui.Label('Training the model… (usually 1–3 minutes)',
@@ -770,7 +815,8 @@ var modelReady = false;
 var pitsLayer = null;
 
 function showPits(geometry, scopeText) {
-  var found = vectorisePits(geometry);
+  var detections = vectorisePits(geometry);
+  var found = detections.filter(ee.Filter.eq('category', 'pit'));
   if (pitsLayer) {
     Map.layers().remove(pitsLayer);
   }
@@ -784,6 +830,7 @@ function showPits(geometry, scopeText) {
     count: found.size(),
     area: found.aggregate_sum('area_ha'),
     newCount: found.filter(ee.Filter.eq('new_pit', 1)).size(),
+    ponds: detections.filter(ee.Filter.eq('category', 'registered pond')).size(),
     small: found.filter(ee.Filter.lt('area_ha', 0.5)).size(),
     byDistrict: found.aggregate_histogram('district'),
     byTehsil: tehsils ? found.aggregate_histogram('tehsil') : {}
@@ -803,6 +850,9 @@ function showPits(geometry, scopeText) {
       lines.push('      ' + name + ' tehsil: ' + r.byTehsil[name]);
     });
     lines.push(r.newCount + ' new since this time last year');
+    if (registeredPonds) {
+      lines.push(r.ponds + ' registered ponds removed (not counted)');
+    }
     lines.push(r.small + ' smaller than 0.5 ha');
     lines.push(r.area.toFixed(1) + ' ha total');
     statusLabel.setValue(lines.join('\n'));
@@ -894,7 +944,7 @@ ee.Dictionary(summary).evaluate(function (r, error) {
   };
   if (r.samplesPerStratum) {
     report['Auto samples (1 pit, 2 water, 3 buildings, 4 crops/trees, 5 dry bare, ' +
-           '6 pit look-alikes at buildings)'] = r.samplesPerStratum;
+           '6 pit look-alikes at buildings, 7 registered ponds)'] = r.samplesPerStratum;
   }
   print('Model summary', report);
 
@@ -973,7 +1023,8 @@ Map.onClick(function (coords) {
 // =============================================================================
 // 7. EXPORTS — every pit in the district (open the Tasks tab and click RUN)
 // =============================================================================
-var allPits = vectorisePits(region);
+var allDetections = vectorisePits(region);
+var allPits = allDetections.filter(ee.Filter.eq('category', 'pit'));
 
 Export.table.toDrive({
   collection: allPits,
@@ -990,6 +1041,17 @@ Export.table.toDrive({
   selectors: ['district', 'tehsil', 'village', 'latitude', 'longitude', 'area_ha', 'prob', 'new_pit',
               'water_frac', 'built_frac', 'compact', 'maps_link']
 });
+
+if (registeredPonds) {
+  Export.table.toDrive({
+    collection: pondDetails(allDetections),
+    description: areaName + '_ponds_excluded_' + periodTag,
+    folder: CONFIG.exportFolder,
+    fileFormat: 'CSV',
+    selectors: ['district', 'tehsil', 'village', 'latitude', 'longitude', 'area_ha', 'prob', 'hsac_id',
+                'hsac_name', 'hsac_type', 'pond_frac', 'maps_link']
+  });
+}
 
 Export.image.toDrive({
   image: pitProbability.updateMask(confidentBuilt.not()).multiply(100).toByte(),   // 0-100 %
