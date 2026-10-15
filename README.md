@@ -69,6 +69,7 @@ Result files in [`results/karnal_2026-06-30_to_2026-09-30/`](results/karnal_2026
 |---|---|
 | `pits.csv` | Every pit: **latitude, longitude, district, tehsil, village**, area, probability, new or older, riverbed or not, nearest road and canal and the distances to them (`road_distance_m`, `canal_distance_m`), Google Maps link |
 | `pits_new.csv`, `pits_old.csv` | The same list split in two: **new pits** (cropland in the same months of 2025, bare or flooded now) and **older pits**, with the same columns |
+| `pits_new.kml`, `pits_old.kml` | Google Earth files of the new pits (red) and the older pits (magenta) only, the same pins and outlines as `pits.kml` |
 | `excluded.csv`, `excluded.geojson` | Detections removed, with the reason in `category`: registered ponds (the register's `hsac_id`, name and type, and the share of the detection inside it), likely village ponds (water next to a village), detections in canals / drains and on roads / highways (the canal or road and the share of the detection on its corridor) |
 | `pits_by_tehsil.csv`, `pits_by_village.csv` | Number of pits, hectares and new pits per tehsil and per village |
 | `pits.geojson`, `pits.gpkg` | Pit outlines for QGIS / ArcGIS, with latitude / longitude attributes |
