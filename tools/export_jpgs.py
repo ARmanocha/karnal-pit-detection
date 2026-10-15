@@ -1,5 +1,5 @@
 """Save every figure of an executed notebook as JPG, plus a numbered full-resolution pit map with tehsil and
-village boundaries, registered ponds, main roads and a latitude / longitude grid, coordinate tables of the new and the largest pits, and a
+village boundaries, registered ponds, canals, main roads and a latitude / longitude grid, coordinate tables of the new and the largest pits, and a
 pits-per-tehsil table.
 
 usage: python export_jpgs.py executed.ipynb pit_outputs/<run> jpg_folder [boundaries_folder]
@@ -28,7 +28,8 @@ boundary_dir = Path(sys.argv[4]) if len(sys.argv) > 4 else Path(__file__).resolv
 out_dir.mkdir(parents=True, exist_ok=True)
 district = run_dir.name.split('_')[0]
 admin = {level: gpd.read_file(boundary_dir / f'{district}_{level}s.geojson')
-         for level in ('tehsil', 'village', 'hsac_pond', 'road') if (boundary_dir / f'{district}_{level}s.geojson').exists()}
+         for level in ('tehsil', 'village', 'hsac_pond', 'road', 'canal')
+         if (boundary_dir / f'{district}_{level}s.geojson').exists()}
 OUTLINE = [effects.withStroke(linewidth=2, foreground='black')]
 
 
@@ -99,6 +100,12 @@ if 'road' in admin:
     roads = admin['road'][~admin['road'].road_class.isin(['residential', 'unclassified'])].to_crs(crs)
     roads.plot(ax=ax, color='#ffa500', linewidth=0.8, alpha=0.8)
 
+# Canals and drains (HSAC) in blue.
+if 'canal' in admin:
+    canals = admin['canal'].to_crs(crs)
+    canals[canals.geom_type.str.contains('Line')].plot(ax=ax, color='#3399ff', linewidth=0.9, alpha=0.9)
+    canals[canals.geom_type.str.contains('Polygon')].plot(ax=ax, color='#3399ff', alpha=0.5, linewidth=0)
+
 # Village (white) and tehsil (yellow) boundaries with their names.
 for level, colour, width, size, alpha in [('village', 'white', 0.6, 6, 0.75), ('tehsil', 'yellow', 3, 22, 1.0)]:
     if level in admin:
@@ -124,11 +131,13 @@ n_pits = 0 if pits is None else int((pits.category == 'pit').sum())
 n_new = 0 if pits is None else int(((pits.category == 'pit') & (pits.new_pit == 1)).sum())
 excluded = pd.read_csv(run_dir / 'excluded.csv') if (run_dir / 'excluded.csv').exists() else pd.DataFrame()
 on_roads = int(excluded.category.str.startswith('on a road').sum()) if len(excluded) else 0
-n_ponds = len(excluded) - on_roads
+in_canals = int(excluded.category.str.startswith('in a canal').sum()) if len(excluded) else 0
+n_ponds = len(excluded) - on_roads - in_canals
 ax.text(0.01, 0.99, f'{n_pits} pits ({n_new} new = red, {n_pits - n_new} older = magenta); numbers = pit_id in pits.csv '
         f'(latitude / longitude, tehsil, village)\n'
-        f'Removed (excluded.csv): {n_ponds} ponds, {on_roads} on roads. Light blue = registered ponds (HSAC), '
-        f'orange = main roads (OSM), yellow = tehsils, white = villages — Sentinel-2 10 m, {run_dir.name}',
+        f'Removed (excluded.csv): {n_ponds} ponds, {in_canals} in canals, {on_roads} on roads. Light blue = registered '
+        f'ponds (HSAC), blue = canals and drains (HSAC), orange = main roads (OSM), yellow = tehsils, white = villages '
+        f'— Sentinel-2 10 m, {run_dir.name}',
         transform=ax.transAxes,
         color='white', fontsize=16, va='top', linespacing=1.5,
         bbox=dict(facecolor='black', alpha=0.65, edgecolor='none', pad=8))
