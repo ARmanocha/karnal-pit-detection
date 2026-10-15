@@ -68,6 +68,7 @@ Result files in [`results/karnal_2026-06-30_to_2026-09-30/`](results/karnal_2026
 | File | What it is |
 |---|---|
 | `pits.csv` | Every pit: **latitude, longitude, district, tehsil, village**, area, probability, new or older, riverbed or not, nearest road and canal and the distances to them (`road_distance_m`, `canal_distance_m`), Google Maps link |
+| `pits_new.csv`, `pits_old.csv` | The same list split in two: **new pits** (cropland in the same months of 2025, bare or flooded now) and **older pits**, with the same columns |
 | `excluded.csv`, `excluded.geojson` | Detections removed, with the reason in `category`: registered ponds (the register's `hsac_id`, name and type, and the share of the detection inside it), likely village ponds (water next to a village), detections in canals / drains and on roads / highways (the canal or road and the share of the detection on its corridor) |
 | `pits_by_tehsil.csv`, `pits_by_village.csv` | Number of pits, hectares and new pits per tehsil and per village |
 | `pits.geojson`, `pits.gpkg` | Pit outlines for QGIS / ArcGIS, with latitude / longitude attributes |
@@ -120,7 +121,9 @@ is where sand is mined. `karnal_canals.csv` (WKT geometry) is the same layer for
 ## Pit coordinates
 
 Every pit's latitude, longitude, tehsil and village are in [`pits.csv`](results/karnal_2026-06-30_to_2026-09-30/pits.csv) (also in the
-GeoJSON, GeoPackage and KML). The tables below list the new pits and the largest pits; **Map** opens the
+GeoJSON, GeoPackage and KML), split into [`pits_new.csv`](results/karnal_2026-06-30_to_2026-09-30/pits_new.csv) (34 new pits)
+and [`pits_old.csv`](results/karnal_2026-06-30_to_2026-09-30/pits_old.csv) (102 older pits); these include the 9 pits just across
+the border, which have their own district in the `district` column. The tables below list the new pits and the largest pits; **Map** opens the
 spot in Google Maps.
 
 | New pits — coordinates | Largest pits — coordinates |
